@@ -1,13 +1,19 @@
 const vscode = require('vscode');
-const fetch = require('node-fetch');
+const { TiddlywikiAPI } = require('./tiddlywiki-api.js');
 const path = require('path');
 const os = require('os');
 const fs = require('fs');
 
-// Read TiddlyWiki host from configuration
-const config = vscode.workspace.getConfiguration('tiddlywiki');
-const tiddlywikiHost = config.get('host', 'http://127.0.0.1:8080');
-const tiddlywikiRecipe = config.get('recipe', 'default');
+// Initialize TiddlyWiki API
+let tiddlywikiAPI = null;
+
+function initializeAPI() {
+    const config = vscode.workspace.getConfiguration('tiddlywiki');
+    const host = config.get('host', 'http://127.0.0.1:8080');
+    const recipe = config.get('recipe', 'default');
+    tiddlywikiAPI = TiddlywikiAPI(host, recipe);
+    return tiddlywikiAPI;
+}
 
 function getWebviewContent(webview, extensionUri) {
     const scriptUri = webview.asWebviewUri(
@@ -27,48 +33,10 @@ function getWebviewContent(webview, extensionUri) {
     `;
 }
 
-async function fetchTiddlersFiltered(searchTerm) {
-    if (!searchTerm || searchTerm.trim() === '') {
-        return []; // Return empty list if no search term
-    }
-
-    // Construct your REST API URL to search tiddlers by title or filter
-    // This is an example URL, adjust to your TiddlyWiki API
-    const url = `${tiddlywikiHost}/recipes/${tiddlywikiRecipe}/tiddlers.json?filter=[all[tiddlers]!is[system]search:title[${encodeURIComponent(searchTerm)}]]`;
-
-    try {
-        const response = await fetch(url);
-        if (!response.ok) {
-            console.error('Failed to fetch tiddlers:', response.statusText);
-            return [];
-        }
-
-        const tiddlers = await response.json();
-        // tiddlers is an object keyed by tiddler titles, so get keys as titles
-        return tiddlers;
-
-    } catch (error) {
-        console.error('Error fetching tiddlers:', error);
-        return [];
-    }
-}
-
-async function getTiddlerByTitle(title) {
-    const url = `${tiddlywikiHost}/recipes/${tiddlywikiRecipe}/tiddlers/${encodeURIComponent(title)}`;
-    try {
-        const response = await fetch(url);
-        if (!response.ok) {
-            console.error('Failed to fetch tiddler:', response.statusText);
-            return null;
-        }
-        return await response.json();
-    } catch (error) {
-        console.error('Error fetching tiddler:', error);
-        return null;
-    }
-}
-
 function activate(context) {
+    // Initialize the API
+    initializeAPI();
+    
     context.subscriptions.push(
         
         vscode.window.registerWebviewViewProvider('tiddlywiki-webview', {
@@ -77,17 +45,26 @@ function activate(context) {
                     enableScripts: true
                 };
                 webviewView.webview.html = getWebviewContent(webviewView.webview, context.extensionUri);
-                
+                //const latest = await fetchLatestTiddlers();
+                //webviewView.webview.postMessage({ command: 'updateList', items: latest });
                 // Receive messages from webview
                 webviewView.webview.onDidReceiveMessage(async message => {
-                    console.log('Received message from webview:', message);
                     if (message.command === 'search') {
                         // call your REST API, filter tiddlers, and send results back
-                        const results = await fetchTiddlersFiltered(message.text);
-                        webviewView.webview.postMessage({ command: 'updateList', items: results });
+                        const results = await tiddlywikiAPI.searchTiddlersByTitle(message.text);
+                        if (!results || !results.success) {
+                            vscode.window.showErrorMessage(`Could not search tiddlers by: ${message.text}`);
+                            return;
+                        }
+                        webviewView.webview.postMessage({ command: 'updateList', items: results.data });
                     }
                     if (message.command === 'openTiddler') {
-                        const tiddler = await getTiddlerByTitle(message.item.title);
+                        const result = await tiddlywikiAPI.getTiddlerByTitle(message.item.title);
+                        if (!result || !result.success) {
+                            vscode.window.showErrorMessage(`Could not fetch tiddler: ${message.item.title}`);
+                            return;
+                        }
+                        const tiddler = result.data;
                         if (!tiddler) {
                             vscode.window.showErrorMessage(`Could not fetch tiddler: ${message.item.title}`);
                             return;
@@ -110,43 +87,64 @@ function activate(context) {
 
     vscode.workspace.onDidSaveTextDocument(async (document) => {
         if (!document.fileName.endsWith('.tid')) return;
+        
+        if (!tiddlywikiAPI) initializeAPI();
+        
         const title = path.basename(document.fileName, '.tid');
-
         const newText = document.getText();
-        const tiddler = await getTiddlerByTitle(title);
-
-        if (!tiddler) {
-            vscode.window.showWarningMessage('Cannot find the original tiddler to save changes.');
-            return;
-        }
-
-        // Merge new text into original tiddler fields
-        const updatedTiddler = {
-            ...tiddler,
-            text: newText
-        };
-
-        const url = `${tiddlywikiHost}/recipes/${tiddlywikiRecipe}/tiddlers/${encodeURIComponent(tiddler.title)}`;
-
+        
         try {
-            const response = await fetch(url, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                    "x-requested-with": "TiddlyWiki"
-                },
-                body: JSON.stringify(updatedTiddler)
-            });
-
-            if (!response.ok) {
-                throw new Error(`Failed to save: ${response.statusText}`);
+            // Get existing tiddler to preserve other fields
+            const existingResult = await tiddlywikiAPI.getTiddlerByTitle(title);
+            
+            if (!existingResult || !existingResult.success) {
+                vscode.window.showWarningMessage('Cannot find the original tiddler to save changes.');
+                return;
+            }
+            
+            const existingTiddler = existingResult.data;
+            
+            // Create updated tiddler with new text
+            // Format date as [UTC]YYYY0MM0DD0hh0mm0ss0XXX
+            function getTiddlyWikiModifiedDate() {
+                const now = new Date();
+                const pad = n => n.toString().padStart(2, '0');
+                const year = now.getUTCFullYear();
+                const month = pad(now.getUTCMonth() + 1);
+                const day = pad(now.getUTCDate());
+                const hour = pad(now.getUTCHours());
+                const min = pad(now.getUTCMinutes());
+                const sec = pad(now.getUTCSeconds());
+                const ms = now.getUTCMilliseconds().toString().padStart(3, '0');
+                return `${year}${month}${day}${hour}${min}${sec}${ms}`;
             }
 
-            vscode.window.showInformationMessage(`✅ Tiddler "${tiddler.title}" saved.`);
+            const updatedFields = {
+                ...existingTiddler,
+                text: newText,
+                modified: getTiddlyWikiModifiedDate()
+            };
+            
+            // Use your API to save the tiddler
+            const saveResult = await tiddlywikiAPI.putTiddler(title, existingTiddler.tags || [], updatedFields);
+            
+            if (saveResult && saveResult.success) {
+                const infoMsg = vscode.window.showInformationMessage(`✅ Tiddler "${title}" saved.`);
+                setTimeout(() => {
+                    if (infoMsg && typeof infoMsg.then === 'function') {
+                        // VSCode does not provide a direct way to programmatically close the message.
+                        // As a workaround, you can use the 'hide' method if available (for progress notifications), 
+                        // but for showInformationMessage, it auto-closes after a timeout or user action.
+                        // So, nothing to do here.
+                    }
+                }, 1000);
+            } else {
+                throw new Error(saveResult?.error?.message || 'Unknown save error');
+            }
+            
         } catch (err) {
             console.error('Save error:', err);
-            vscode.window.showErrorMessage(`❌ Could not save "${tiddler.title}": ${err.message}`);
+            vscode.window.showErrorMessage(`❌ Could not save "${title}": ${err.message}`);
         }
     });
 
