@@ -8,9 +8,18 @@ const fs = require('fs');
 let tiddlywikiAPI = null;
 let currentWebview = null;
 
+function getTiddlyWikiHost() {
+    // Use environment variable in debug mode, otherwise use user config
+    if (process.env.TIDDLYWIKI_HOST_TEST) {
+        return process.env.TIDDLYWIKI_HOST_TEST;
+    }
+    const config = vscode.workspace.getConfiguration('tiddlywiki');
+    return config.get('host', 'http://127.0.0.1:8080');
+}
+
 function initializeAPI() {
     const config = vscode.workspace.getConfiguration('tiddlywiki');
-    const host = config.get('host', 'http://127.0.0.1:8080');
+    const host = getTiddlyWikiHost();
     const recipe = config.get('recipe', 'default');
     tiddlywikiAPI = TiddlywikiAPI(host, recipe);
     return tiddlywikiAPI;
@@ -249,7 +258,7 @@ function activate(context) {
                         console.log('Using template for snippet:', currentTrigger.template);
                         console.log('Selected option:', selection.label);
                         const caretIndex = currentTrigger.template.indexOf("$caret$");
-                        snippet =  currentTrigger.template
+                        snippet = currentTrigger.template
                             .replace("$option$", selection.label)
                             .replace("$caret$", "$0");
                     } else {
