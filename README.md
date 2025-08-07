@@ -8,6 +8,7 @@
 
 `tiddlyedit` is a Visual Studio Code extension that streamlines editing tiddlers in [TiddlyWiki](https://tiddlywiki.com/) configured with node.js. 
 
+
 ## Features
 
 - **Search Tiddlers:** Search for tiddlers using a search bar. 
@@ -20,6 +21,14 @@
 * Require TiddlyWiki configured with node.js
 * Requires [TiddlyWiki5 Syntax](https://github.com/joshuafontany/VSCode-TW5-Syntax)
 
+## Usage
+
+1. **Open sidebar panel** using the TiddlyWiki Icon in the left sidebar.
+2. The latest 10 tiddlers are listed or you can use the search bar to find a specific tiddler.
+3. Open a tiddler to edit. The tiddler is saved into temporary folder with filename `title.tid` and content as tiddler text field.
+4. Save your changes to update the tiddler in your TiddlyWiki instance through WebAPI.
+
+
 ## Extension Settings
 
 `tiddlyedit` contributes the following settings:
@@ -29,6 +38,9 @@
 
 You can configure these in your VS Code settings.
 
+## Configuration of TiddlyWiki
+
+* Reduce [Sync Polling Interval](https://tiddlywiki.com/#Hidden%20Setting%3A%20Sync%20Polling%20Interval) from server to client through creating a config tiddler `$:/config/SyncPollingInterval` (e.g., `1000` for 1 second). The default value is `60000` (60 seconds).
 
 ## Release Notes
 
