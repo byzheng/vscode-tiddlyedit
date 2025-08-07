@@ -27,7 +27,7 @@
 2. The latest 10 tiddlers are listed or you can use the search bar to find a specific tiddler.
 3. Open a tiddler to edit. The tiddler is saved into temporary folder with filename `title.tid` and content as tiddler text field.
 4. Save your changes to update the tiddler in your TiddlyWiki instance through WebAPI.
-
+5. Your browser will automatically refresh to show the updated tiddler. The sync interval is determined by the TiddlyWiki hidden configuration [Sync Polling Interval](https://tiddlywiki.com/#Hidden%20Setting%3A%20Sync%20Polling%20Interval).
 
 ## Extension Settings
 
