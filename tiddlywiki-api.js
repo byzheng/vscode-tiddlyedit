@@ -113,7 +113,7 @@ function TiddlywikiAPI(host, recipe = "default") {
         return request(path);
     }
 
-    async function searchTiddlersByTitle(searchTerm) {
+    async function searchTiddlers(searchTerm) {
         if (!searchTerm || typeof searchTerm !== "string" || searchTerm.trim() === "") {
             return Promise.reject(new Error("Invalid search term: Search term must be a non-empty string."));
         }
@@ -172,7 +172,7 @@ function TiddlywikiAPI(host, recipe = "default") {
         getTiddlerByTitle: getTiddlerByTitle,
         getTiddlersByFilter: getTiddlersByFilter,
         putTiddler: putTiddler,
-        searchTiddlersByTitle: searchTiddlersByTitle
+        searchTiddlers: searchTiddlers
     };
 }
 
