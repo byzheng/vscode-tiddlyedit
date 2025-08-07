@@ -131,7 +131,36 @@ function TiddlywikiAPI(host, recipe = "default") {
         return request(path);
     }
 
-    
+    async function getAutoCompleteOptions(triggerTiddler, searchTerm) {
+
+        if (typeof searchTerm !== "string") {
+            return [];
+        }
+        if (!triggerTiddler) {
+            return [];
+        }
+        if (!triggerTiddler.filter) {
+            return [];
+        }
+        const filter = triggerTiddler.filter;
+        const filterWithQuery = filter.replace(/<query>/g, searchTerm);
+        const items = await getTiddlersByFilter(filterWithQuery);
+        if (!items || !items.success || !Array.isArray(items.data)) {
+            return [];
+        }
+        return items.data;
+    }
+
+    async function getTiddlerFields(tiddler) {
+        if (!tiddler || typeof tiddler !== "object") {
+            return {};
+        }
+        const fields = {};
+        for (const [key, value] of Object.entries(tiddler.fields || {})) {
+            fields[key] = value;
+        }
+        return fields;
+    }
 
     async function putTiddler(title, tags = [], fields = {}) {
         const path = `/recipes/default/tiddlers/${encodeURIComponent(title)}`;

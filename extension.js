@@ -47,14 +47,36 @@ async function refreshWebviewTiddlers(webview) {
     }
 }
 
+async function getAutoCompleteSuggestions() {
+    try {
+        const filter = `[tag[$:/tags/EC/AutoComplete/Trigger]]`;
+        const latest = await tiddlywikiAPI.getTiddlersByFilter(filter);
+        if (latest && latest.success) {
+            return latest.data;
+        } else {
+            console.error('Could not fetch latest tiddlers for autocomplete');
+            return [];
+        }
+    } catch (error) {
+        console.error('Error fetching autocomplete suggestions:', error);
+        return [];
+    }
+}
+
 function activate(context) {
     // Initialize the API
     initializeAPI();
+    // Register the "tiddlywiki" language if not already registered
+    vscode.languages.getLanguages().then(langs => {
+        if (!langs.includes("tiddlywiki")) {
+            vscode.languages.register({ id: "tiddlywiki", extensions: [".tid"], aliases: ["TiddlyWiki"] });
+        }
+    });
 
     const tempFolder = path.join(os.tmpdir(), 'tiddlyedit-temp');
     // Create it once if it doesn’t exist
     if (!fs.existsSync(tempFolder)) {
-    fs.mkdirSync(tempFolder);
+        fs.mkdirSync(tempFolder);
     }
 
 
@@ -147,14 +169,14 @@ function activate(context) {
                         const tmpFilePath = path.join(tempFolder, `${tiddler.title}.tid`);
                         fs.writeFileSync(tmpFilePath, tiddler.text || '', 'utf8');
 
-
-                        let language = "markdown";
+                        
+                        let language = "tiddlywiki";
                         if (tiddler.type === "application/javascript") language = "javascript";
                         else if (tiddler.type === "text/css") language = "css";
                         else if (tiddler.type === "application/json") language = "json";
                         else if (tiddler.type === "text/html") language = "html";
                         else if (tiddler.type === "text/markdown" || tiddler.type === "text/x-markdown") language = "markdown";
-                        else if (tiddler.type === "text/vnd.tiddlywiki") language = "markdown";
+                        else if (tiddler.type === "text/vnd.tiddlywiki") language = "tiddlywiki";
                         else language = "text";
 
                         const titledDoc = await vscode.workspace.openTextDocument(tmpFilePath);
@@ -180,6 +202,57 @@ function activate(context) {
             }
         })
     );
+
+    getAutoCompleteSuggestions().then(triggerTiddlers => {
+        for (const triggerTiddler of triggerTiddlers) {
+            if (!triggerTiddler || !triggerTiddler.trigger) {
+                continue;
+            }
+            const trigger = triggerTiddler.trigger;
+            context.subscriptions.push(
+                vscode.languages.registerCompletionItemProvider(
+                    { scheme: 'file', language: 'tiddlywiki' },
+                    {
+                        provideCompletionItems(document, position) {
+                            const line = document.lineAt(position).text;
+                            const beforeCursor = line.substring(0, position.character);
+
+                            if (!beforeCursor.endsWith(trigger)) {
+                                return undefined;
+                            }
+
+                            // remove the trigger to replace it later
+                            const startPos = position.translate(0, -trigger.length);
+
+                            // Build suggestion list from tiddlers
+                            // Parse the searchTerm after the trigger
+                            // Example: if trigger is '@', and line is "foo bar @abc", searchTerm is "abc"
+                            const afterTrigger = beforeCursor.slice(-trigger.length);
+                            let searchTerm = '';
+                            if (afterTrigger === trigger) {
+                                // Get the text after the trigger up to the cursor
+                                const match = beforeCursor.match(new RegExp(`${trigger}([\\w-]*)$`));
+                                if (match) {
+                                    searchTerm = match[1];
+                                }
+                            }
+                            console.log('Search term:', searchTerm);
+                            return tiddlywikiAPI.getAutoCompleteOptions(trigger, searchTerm).then(options => {
+                                return options.map(option => {
+                                    const item = new vscode.CompletionItem(option, vscode.CompletionItemKind.Text);
+                                    const template = triggerMap[trigger].replace('$option$', option).replace('$caret$', '');
+                                    item.insertText = new vscode.SnippetString(template);
+                                    item.range = new vscode.Range(startPos, position);
+                                    return item;
+                                });
+                            });
+                        }
+                    },
+                    ...trigger.split('') // this is important: the trigger characters
+                )
+            );
+        }
+    });
 
     vscode.workspace.onDidSaveTextDocument(async (document) => {
         if (!document.fileName.endsWith('.tid')) return;
