@@ -122,6 +122,15 @@ function TiddlywikiAPI(host, recipe = "default") {
         return request(path);
     }
 
+    async function getLatestTiddlers(number = 10) {
+        if (!number || typeof number !== "number" || number <= 0) {
+            return Promise.reject(new Error("Invalid number: Number must be a positive integer."));
+        }
+        const filter = `[all[tiddlers]!is[system]!is[shadow]!sort[modified]limit[${number}]]`;
+        const path = `/recipes/${recipe}/tiddlers.json?filter=${encodeURIComponent(filter)}`;
+        return request(path);
+    }
+
     
 
     async function putTiddler(title, tags = [], fields = {}) {
