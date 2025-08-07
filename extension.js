@@ -66,12 +66,6 @@ async function getAutoCompleteSuggestions() {
 function activate(context) {
     // Initialize the API
     initializeAPI();
-    // Register the "tiddlywiki" language if not already registered
-    vscode.languages.getLanguages().then(langs => {
-        if (!langs.includes("tiddlywiki")) {
-            vscode.languages.register({ id: "tiddlywiki", extensions: [".tid"], aliases: ["TiddlyWiki"] });
-        }
-    });
 
     const tempFolder = path.join(os.tmpdir(), 'tiddlyedit-temp');
     // Create it once if it doesn’t exist
@@ -170,15 +164,15 @@ function activate(context) {
                         fs.writeFileSync(tmpFilePath, tiddler.text || '', 'utf8');
 
                         
-                        let language = "tiddlywiki";
+                        let language = "tiddlywiki5";
                         if (tiddler.type === "application/javascript") language = "javascript";
                         else if (tiddler.type === "text/css") language = "css";
                         else if (tiddler.type === "application/json") language = "json";
                         else if (tiddler.type === "text/html") language = "html";
                         else if (tiddler.type === "text/markdown" || tiddler.type === "text/x-markdown") language = "markdown";
-                        else if (tiddler.type === "text/vnd.tiddlywiki") language = "tiddlywiki";
+                        else if (tiddler.type === "text/vnd.tiddlywiki") language = "tiddlywiki5";
                         else language = "text";
-
+                        console.log('Opening tiddler with language:', language);
                         const titledDoc = await vscode.workspace.openTextDocument(tmpFilePath);
 
                         if (language) {
@@ -211,7 +205,7 @@ function activate(context) {
             const trigger = triggerTiddler.trigger;
             context.subscriptions.push(
                 vscode.languages.registerCompletionItemProvider(
-                    { scheme: 'file', language: 'tiddlywiki' },
+                    { scheme: 'file', language: 'tiddlywiki5' },
                     {
                         provideCompletionItems(document, position) {
                             const line = document.lineAt(position).text;
