@@ -32,6 +32,11 @@ You can configure these in your VS Code settings.
 
 ## Release Notes
 
+
+### 0.0.2
+
+- Auto completion using [Auto Complete](https://github.com/EvidentlyCube/TW5-AutoComplete) plugin for TiddlyWiki.
+
 ### 0.0.1
 
 - Added preview support for Tiddlers.
