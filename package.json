@@ -1,6 +1,7 @@
 {
   "name": "vscode-tiddlyedit",
   "displayName": "TiddlyEdit",
+  "publisher": "byzheng",
   "license": "MIT",
   "description": "Seamlessly edit and manage TiddlyWiki tiddlers within VS Code using a REST API connection.",
   "version": "0.0.1",
@@ -48,9 +49,23 @@
     },
     "commands": [
       {
-        "command": "tiddlywiki.refresh",
-        "title": "Refresh Tiddlers",
-        "icon": "$(refresh)"
+        "command": "tiddlyedit.insertAutocomplete",
+        "title": "TiddlyWiki: Insert Autocomplete"
+      }
+    ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "tiddlyedit.insertAutocomplete",
+          "when": "editorTextFocus"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "key": "ctrl+space",
+        "command": "tiddlyedit.insertAutocomplete",
+        "when": "editorTextFocus"
       }
     ]
   },

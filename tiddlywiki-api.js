@@ -1,6 +1,6 @@
 
 
-        
+
 const fetch = require('node-fetch');
 
 /**
@@ -131,24 +131,45 @@ function TiddlywikiAPI(host, recipe = "default") {
         return request(path);
     }
 
-    async function getAutoCompleteOptions(triggerTiddler, searchTerm) {
+
+    async function getAutoCompleteConfigure() {
+        try {
+            const filter = `[tag[$:/tags/EC/AutoComplete/Trigger]]`;
+            const latest = await getTiddlersByFilter(filter);
+            if (latest && latest.success) {
+                return latest.data;
+            } else {
+                console.error('Could not fetch latest tiddlers for autocomplete');
+                return [];
+            }
+        } catch (error) {
+            console.error('Error fetching autocomplete suggestions:', error);
+            return [];
+        }
+    }
+
+
+    async function getAutoCompleteOptions(config, searchTerm) {
 
         if (typeof searchTerm !== "string") {
             return [];
         }
-        if (!triggerTiddler) {
+        if (!config ) {
             return [];
         }
-        if (!triggerTiddler.filter) {
+        if (!config.filter) {
             return [];
         }
-        const filter = triggerTiddler.filter;
-        const filterWithQuery = filter.replace(/<query>/g, searchTerm);
+        if (searchTerm.startsWith(config.trigger)) {
+            searchTerm = searchTerm.substring(config.trigger.length);
+        }
+        const filter = config.filter;
+        const filterWithQuery = filter.replace(/<query>/g, "[" + searchTerm + "]");
         const items = await getTiddlersByFilter(filterWithQuery);
         if (!items || !items.success || !Array.isArray(items.data)) {
             return [];
         }
-        return items.data;
+        return items;
     }
 
     async function getTiddlerFields(tiddler) {
@@ -203,7 +224,9 @@ function TiddlywikiAPI(host, recipe = "default") {
         getTiddlersByFilter: getTiddlersByFilter,
         putTiddler: putTiddler,
         searchTiddlers: searchTiddlers,
-        getLatestTiddlers: getLatestTiddlers
+        getLatestTiddlers: getLatestTiddlers,
+        getAutoCompleteConfigure: getAutoCompleteConfigure,
+        getAutoCompleteOptions: getAutoCompleteOptions
     };
 }
 

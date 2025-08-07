@@ -47,21 +47,6 @@ async function refreshWebviewTiddlers(webview) {
     }
 }
 
-async function getAutoCompleteSuggestions() {
-    try {
-        const filter = `[tag[$:/tags/EC/AutoComplete/Trigger]]`;
-        const latest = await tiddlywikiAPI.getTiddlersByFilter(filter);
-        if (latest && latest.success) {
-            return latest.data;
-        } else {
-            console.error('Could not fetch latest tiddlers for autocomplete');
-            return [];
-        }
-    } catch (error) {
-        console.error('Error fetching autocomplete suggestions:', error);
-        return [];
-    }
-}
 
 function activate(context) {
     // Initialize the API
@@ -72,7 +57,10 @@ function activate(context) {
     if (!fs.existsSync(tempFolder)) {
         fs.mkdirSync(tempFolder);
     }
-
+    let autoCompleteConfigure;
+    tiddlywikiAPI.getAutoCompleteConfigure().then(conf => {
+        autoCompleteConfigure = conf;
+    });
 
     function isInTempDir(filePath) {
         try {
@@ -163,7 +151,7 @@ function activate(context) {
                         const tmpFilePath = path.join(tempFolder, `${tiddler.title}.tid`);
                         fs.writeFileSync(tmpFilePath, tiddler.text || '', 'utf8');
 
-                        
+
                         let language = "tiddlywiki5";
                         if (tiddler.type === "application/javascript") language = "javascript";
                         else if (tiddler.type === "text/css") language = "css";
@@ -186,67 +174,98 @@ function activate(context) {
             }
         })
     );
-
-    // Register refresh command
-    context.subscriptions.push(
-        vscode.commands.registerCommand('tiddlywiki.refresh', () => {
-            if (currentWebview) {
-                refreshWebviewTiddlers(currentWebview);
-                vscode.window.showInformationMessage('Refreshed TiddlyWiki tiddlers');
-            }
-        })
-    );
-
-    getAutoCompleteSuggestions().then(triggerTiddlers => {
-        for (const triggerTiddler of triggerTiddlers) {
-            if (!triggerTiddler || !triggerTiddler.trigger) {
+    function getAutoTrigger (value) {
+        if (!autoCompleteConfigure || !Array.isArray(autoCompleteConfigure)) {
+            return null;
+        }
+        for (const conf of autoCompleteConfigure) {
+            if (!conf || typeof conf.trigger !== 'string' || conf.trigger === '') {
                 continue;
             }
-            const trigger = triggerTiddler.trigger;
-            context.subscriptions.push(
-                vscode.languages.registerCompletionItemProvider(
-                    { scheme: 'file', language: 'tiddlywiki5' },
-                    {
-                        provideCompletionItems(document, position) {
-                            const line = document.lineAt(position).text;
-                            const beforeCursor = line.substring(0, position.character);
-
-                            if (!beforeCursor.endsWith(trigger)) {
-                                return undefined;
-                            }
-
-                            // remove the trigger to replace it later
-                            const startPos = position.translate(0, -trigger.length);
-
-                            // Build suggestion list from tiddlers
-                            // Parse the searchTerm after the trigger
-                            // Example: if trigger is '@', and line is "foo bar @abc", searchTerm is "abc"
-                            const afterTrigger = beforeCursor.slice(-trigger.length);
-                            let searchTerm = '';
-                            if (afterTrigger === trigger) {
-                                // Get the text after the trigger up to the cursor
-                                const match = beforeCursor.match(new RegExp(`${trigger}([\\w-]*)$`));
-                                if (match) {
-                                    searchTerm = match[1];
-                                }
-                            }
-                            console.log('Search term:', searchTerm);
-                            return tiddlywikiAPI.getAutoCompleteOptions(trigger, searchTerm).then(options => {
-                                return options.map(option => {
-                                    const item = new vscode.CompletionItem(option, vscode.CompletionItemKind.Text);
-                                    const template = triggerMap[trigger].replace('$option$', option).replace('$caret$', '');
-                                    item.insertText = new vscode.SnippetString(template);
-                                    item.range = new vscode.Range(startPos, position);
-                                    return item;
-                                });
-                            });
-                        }
-                    },
-                    ...trigger.split('') // this is important: the trigger characters
-                )
-            );
+            if (!value.startsWith(conf.trigger)) {
+                continue; // not matching this trigger
+            }
+            return conf;
         }
-    });
+        return null
+    }
+    async function getAutoCompleteOptions(value) {
+        if (typeof value !== "string" || value.length < 2) {
+            return [];
+        }
+        let options = [];
+        const autoTrigger = getAutoTrigger(value);
+        if (autoTrigger) {
+            // If we have a trigger, use it to get options
+            options = await tiddlywikiAPI.getAutoCompleteOptions(autoTrigger, value);
+        } else {
+            options = await tiddlywikiAPI.searchTiddlers(value);
+        }
+        if (!options || !options.success) {
+            return [];
+        }
+        return {
+            trigger: autoTrigger,
+            options: options.data
+        };
+    }
+    // Auto complete 
+    context.subscriptions.push(
+        vscode.commands.registerCommand('tiddlyedit.insertAutocomplete', async () => {
+            const quickPick = vscode.window.createQuickPick();
+            quickPick.placeholder = "Type at least 2 chars for suggestions...";
+            quickPick.matchOnDescription = true; // better filtering
+            quickPick.matchOnDetail = true;
+
+            let currentTrigger = null; // store trigger/search state
+
+            quickPick.onDidChangeValue(async (value) => {
+                if (value.length < 2) {
+                    return [];
+                }
+                const optionsData = await getAutoCompleteOptions(value);
+                
+                if (!optionsData || !optionsData.options || optionsData.options.length === 0) {
+                    quickPick.items = [];
+                    return;
+                }
+                currentTrigger = optionsData.trigger;
+                quickPick.items = optionsData.options.map(opt => ({ label: opt.title }));
+                console.log('AutoComplete items:', quickPick.items);
+            });
+
+            quickPick.onDidAccept(() => {
+                const selection = quickPick.selectedItems[0];
+                if (selection) {
+                    const editor = vscode.window.activeTextEditor;
+                    if (!editor) {
+                        return;
+                    }
+                    let snippet;
+                    
+                    if (currentTrigger && currentTrigger.template) {
+                        snippet = currentTrigger.template.replace(/\$options\$/g, selection.label);
+                        if (snippet.includes('$caret$')) {
+                            const caretIndex = snippet.indexOf('$caret$');
+                            snippet = snippet.replace('$caret$', '');
+                            editor.insertSnippet(
+                                new vscode.SnippetString(snippet.slice(0, caretIndex) + '$0' + snippet.slice(caretIndex)),
+                                editor.selection.active
+                            );
+                            return;
+                        }
+                    } else {
+                        snippet = `[[${selection.label}]] `;
+                    }
+
+                    editor.insertSnippet(new vscode.SnippetString(snippet));
+                }
+                quickPick.hide();
+            });
+
+            quickPick.show();
+        })
+    );
 
     vscode.workspace.onDidSaveTextDocument(async (document) => {
         if (!document.fileName.endsWith('.tid')) return;
