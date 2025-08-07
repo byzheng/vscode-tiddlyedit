@@ -1,0 +1,24 @@
+#tw-tiddler-list {
+    list-style-type: none;
+    /* remove dots */
+    padding-left: 0;
+    /* remove default indent */
+    margin: 0;
+}
+
+#tw-tiddler-list li {
+    margin: 4px 0;
+}
+
+#tw-tiddler-list li a {
+    color: black;
+    /* black hyperlinks */
+    text-decoration: none;
+    /* remove underline */
+    cursor: pointer;
+}
+
+#tw-tiddler-list li a:hover {
+    text-decoration: underline;
+    /* underline on hover */
+}
