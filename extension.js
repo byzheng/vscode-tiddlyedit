@@ -45,13 +45,13 @@ function activate(context) {
                     enableScripts: true
                 };
                 webviewView.webview.html = getWebviewContent(webviewView.webview, context.extensionUri);
-                //const latest = await fetchLatestTiddlers();
+                // const latest = await tiddlywikiAPI.getLatestTiddlers();
                 //webviewView.webview.postMessage({ command: 'updateList', items: latest });
                 // Receive messages from webview
                 webviewView.webview.onDidReceiveMessage(async message => {
                     if (message.command === 'search') {
                         // call your REST API, filter tiddlers, and send results back
-                        const results = await tiddlywikiAPI.searchTiddlersByTitle(message.text);
+                        const results = await tiddlywikiAPI.searchTiddlers(message.text);
                         if (!results || !results.success) {
                             vscode.window.showErrorMessage(`Could not search tiddlers by: ${message.text}`);
                             return;
@@ -125,19 +125,11 @@ function activate(context) {
                 modified: getTiddlyWikiModifiedDate()
             };
             
-            // Use your API to save the tiddler
+            // Save back to TiddlyWiki using PUT request
             const saveResult = await tiddlywikiAPI.putTiddler(title, existingTiddler.tags || [], updatedFields);
             
             if (saveResult && saveResult.success) {
-                const infoMsg = vscode.window.showInformationMessage(`✅ Tiddler "${title}" saved.`);
-                setTimeout(() => {
-                    if (infoMsg && typeof infoMsg.then === 'function') {
-                        // VSCode does not provide a direct way to programmatically close the message.
-                        // As a workaround, you can use the 'hide' method if available (for progress notifications), 
-                        // but for showInformationMessage, it auto-closes after a timeout or user action.
-                        // So, nothing to do here.
-                    }
-                }, 1000);
+                vscode.window.setStatusBarMessage(`✅ Tiddler "${title}" saved`, 3000); // shows for 3 seconds
             } else {
                 throw new Error(saveResult?.error?.message || 'Unknown save error');
             }
