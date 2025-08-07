@@ -12,22 +12,75 @@
   "activationEvents": [],
   "main": "./extension.js",
   "contributes": {
-    "commands": [{
-      "command": "tiddlyedit.helloWorld",
-      "title": "Hello World"
-    }]
+    "configuration": {
+      "title": "TiddlyWiki",
+      "properties": {
+        "tiddlywiki.host": {
+          "type": "string",
+          "default": "http://127.0.0.1:8080",
+          "description": "Base URL of the TiddlyWiki server"
+        },
+        "tiddlywiki.recipe": {
+          "type": "string",
+          "default": "default",
+          "description": "Recipe name"
+        }
+      }
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "tiddlywiki-container",
+          "title": "TiddlyWiki",
+          "icon": "media/Tiddlywiki.svg"
+        }
+      ]
+    },
+    "views": {
+      "tiddlywiki-container": [
+        {
+          "id": "tiddlywiki-webview",
+          "name": "TiddlyWiki Search",
+          "type": "webview"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "tiddlywiki.searchTiddler",
+        "title": "TiddlyWiki: Search Tiddler"
+      },
+      {
+        "command": "tiddlywiki.refresh",
+        "title": "Refresh",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "tiddlywiki.search",
+        "title": "Search",
+        "icon": "$(search)"
+      },
+      {
+        "command": "tiddlywiki.showView",
+        "title": "TiddlyWiki: Show View"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "tiddlywiki.refresh",
+          "when": "view == tiddlywiki-view",
+          "group": "navigation"
+        },
+        {
+          "command": "tiddlywiki.search",
+          "when": "view == tiddlywiki-view",
+          "group": "navigation"
+        }
+      ]
+    }
   },
-  "scripts": {
-    "lint": "eslint .",
-    "pretest": "npm run lint",
-    "test": "vscode-test"
-  },
-  "devDependencies": {
-    "@types/vscode": "^1.102.0",
-    "@types/mocha": "^10.0.10",
-    "@types/node": "22.x",
-    "eslint": "^9.32.0",
-    "@vscode/test-cli": "^0.0.11",
-    "@vscode/test-electron": "^2.5.2"
+  "dependencies": {
+    "node-fetch": "^2.6.7"
   }
 }
