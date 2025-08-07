@@ -47,33 +47,38 @@ async function refreshWebviewTiddlers(webview) {
     }
 }
 
-function isInTempDir(filePath) {
-    try {
-        const tempDir = os.tmpdir();
-        let realTempDir = fs.realpathSync(tempDir);
-        let realFile = fs.realpathSync(filePath);
-        // On Windows, ignore case sensitivity
-        if (process.platform === 'win32') {
-            realTempDir = realTempDir.toLowerCase();
-            realFile = realFile.toLowerCase();
-        }
-        return realFile.startsWith(realTempDir + path.sep);
-    } catch {
-        return false; // In case either path doesn't exist
-    }
-}
-
 function activate(context) {
     // Initialize the API
     initializeAPI();
+
+    const tempFolder = path.join(os.tmpdir(), 'tiddlyedit-temp');
+    // Create it once if it doesn’t exist
+    if (!fs.existsSync(tempFolder)) {
+    fs.mkdirSync(tempFolder);
+    }
+
+
+    function isInTempDir(filePath) {
+        try {
+            let realTempDir = fs.realpathSync(tempFolder);
+            let realFile = fs.realpathSync(filePath);
+            // On Windows, ignore case sensitivity
+            if (process.platform === 'win32') {
+                realTempDir = realTempDir.toLowerCase();
+                realFile = realFile.toLowerCase();
+            }
+            return realFile.startsWith(realTempDir + path.sep);
+        } catch {
+            return false; // In case either path doesn't exist
+        }
+    }
+
 
     // Listen for configuration changes
     context.subscriptions.push(
         vscode.workspace.onDidChangeConfiguration(async event => {
             if (event.affectsConfiguration('tiddlywiki')) {
 
-                // Close all open .tid files in the temp folder
-                const tempDir = os.tmpdir();
                 // Get all open editors, not just visible ones
 
                 const tabs = vscode.window.tabGroups.all.flatMap(group => group.tabs);
@@ -140,7 +145,7 @@ function activate(context) {
                         }
                         // console.log('Opening tiddler:', tiddler);
 
-                        const tmpFilePath = path.join(os.tmpdir(), `${tiddler.title}.tid`);
+                        const tmpFilePath = path.join(tempFolder, `${tiddler.title}.tid`);
                         fs.writeFileSync(tmpFilePath, tiddler.text || '', 'utf8');
 
 
