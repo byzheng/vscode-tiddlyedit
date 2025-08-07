@@ -45,7 +45,15 @@ function activate(context) {
                     enableScripts: true
                 };
                 webviewView.webview.html = getWebviewContent(webviewView.webview, context.extensionUri);
-                // const latest = await tiddlywikiAPI.getLatestTiddlers();
+                // Fetch and display latest tiddlers when the panel loads
+                (async () => {
+                    const latest = await tiddlywikiAPI.getLatestTiddlers();
+                    if (latest && latest.success) {
+                        webviewView.webview.postMessage({ command: 'updateList', items: latest.data });
+                    } else {
+                        vscode.window.showErrorMessage('Could not fetch latest tiddlers.');
+                    }
+                })();
                 //webviewView.webview.postMessage({ command: 'updateList', items: latest });
                 // Receive messages from webview
                 webviewView.webview.onDidReceiveMessage(async message => {

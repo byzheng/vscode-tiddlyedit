@@ -172,7 +172,8 @@ function TiddlywikiAPI(host, recipe = "default") {
         getTiddlerByTitle: getTiddlerByTitle,
         getTiddlersByFilter: getTiddlersByFilter,
         putTiddler: putTiddler,
-        searchTiddlers: searchTiddlers
+        searchTiddlers: searchTiddlers,
+        getLatestTiddlers: getLatestTiddlers
     };
 }
 
