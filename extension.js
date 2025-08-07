@@ -136,8 +136,12 @@ function activate(context) {
                 // Receive messages from webview
                 webviewView.webview.onDidReceiveMessage(async message => {
                     if (message.command === 'search') {
-                        // call your REST API, filter tiddlers, and send results back
-                        const results = await tiddlywikiAPI.searchTiddlers(message.text);
+                        let results;
+                        if (message.text === undefined || message.text === null || message.text === '') {
+                            results = await tiddlywikiAPI.getLatestTiddlers();
+                        } else {
+                            results = await tiddlywikiAPI.searchTiddlers(message.text);
+                        }
                         if (!results || !results.success) {
                             vscode.window.showErrorMessage(`Could not search tiddlers by: ${message.text}`);
                             return;
