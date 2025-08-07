@@ -94,15 +94,14 @@ function activate(context) {
                     }
                 }
 
-                // // Reinitialize API with new settings
-                // initializeAPI();
+                // Reinitialize API with new settings
+                initializeAPI();
 
-                // // Refresh webview if it's open
-                // if (currentWebview) {
-                //     refreshWebviewTiddlers(currentWebview);
-                // }
-
-                // vscode.window.showInformationMessage('TiddlyWiki configuration updated!');
+                // Refresh webview if it's open
+                if (currentWebview) {
+                    refreshWebviewTiddlers(currentWebview);
+                }
+                vscode.window.showInformationMessage('TiddlyWiki configuration updated!');
             }
         })
     );
