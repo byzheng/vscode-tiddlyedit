@@ -77,13 +77,26 @@ function activate(context) {
                             vscode.window.showErrorMessage(`Could not fetch tiddler: ${message.item.title}`);
                             return;
                         }
-                        console.log('Opening tiddler:', tiddler);
+                        // console.log('Opening tiddler:', tiddler);
                         
                         const tmpFilePath = path.join(os.tmpdir(), `${tiddler.title}.tid`);
                         fs.writeFileSync(tmpFilePath, tiddler.text || '', 'utf8');
+                                                
+                        
+                        let language = "markdown";
+                        if (tiddler.type === "application/javascript") language = "javascript";
+                        else if (tiddler.type === "text/css") language = "css";
+                        else if (tiddler.type === "application/json") language = "json";
+                        else if (tiddler.type === "text/html") language = "html";
+                        else if (tiddler.type === "text/markdown" || tiddler.type === "text/x-markdown") language = "markdown";
+                        else if (tiddler.type === "text/vnd.tiddlywiki") language = "markdown";
+                        else language = "text";
 
                         const titledDoc = await vscode.workspace.openTextDocument(tmpFilePath);
-                        await vscode.languages.setTextDocumentLanguage(titledDoc, "plaintext"); // ensure it's a valid VSCode language
+                        
+                        if (language) {
+                            await vscode.languages.setTextDocumentLanguage(titledDoc, language);
+                        }
                         await vscode.window.showTextDocument(titledDoc);
 
                         return;
@@ -110,7 +123,7 @@ function activate(context) {
                 return;
             }
             
-            const existingTiddler = existingResult.data;
+            //const existingTiddler = existingResult.data;
             
             // Create updated tiddler with new text
             // Format date as [UTC]YYYY0MM0DD0hh0mm0ss0XXX
@@ -128,13 +141,12 @@ function activate(context) {
             }
 
             const updatedFields = {
-                ...existingTiddler,
                 text: newText,
                 modified: getTiddlyWikiModifiedDate()
             };
             
             // Save back to TiddlyWiki using PUT request
-            const saveResult = await tiddlywikiAPI.putTiddler(title, existingTiddler.tags || [], updatedFields);
+            const saveResult = await tiddlywikiAPI.putTiddler(title, [], updatedFields);
             
             if (saveResult && saveResult.success) {
                 vscode.window.setStatusBarMessage(`✅ Tiddler "${title}" saved`, 3000); // shows for 3 seconds

@@ -1,7 +1,7 @@
 {
-  "name": "tiddlyedit",
+  "name": "vscode-tiddlyedit",
   "displayName": "TiddlyEdit",
-  "description": "Edit TiddlyWiki tiddlers in VS Code via REST API",
+  "description": "Seamlessly edit and manage TiddlyWiki tiddlers within VS Code using a REST API connection.",
   "version": "0.0.1",
   "engines": {
     "vscode": "^1.102.0"
@@ -42,40 +42,6 @@
           "id": "tiddlywiki-webview",
           "name": "TiddlyWiki Search",
           "type": "webview"
-        }
-      ]
-    },
-    "commands": [
-      {
-        "command": "tiddlywiki.searchTiddler",
-        "title": "TiddlyWiki: Search Tiddler"
-      },
-      {
-        "command": "tiddlywiki.refresh",
-        "title": "Refresh",
-        "icon": "$(refresh)"
-      },
-      {
-        "command": "tiddlywiki.search",
-        "title": "Search",
-        "icon": "$(search)"
-      },
-      {
-        "command": "tiddlywiki.showView",
-        "title": "TiddlyWiki: Show View"
-      }
-    ],
-    "menus": {
-      "view/title": [
-        {
-          "command": "tiddlywiki.refresh",
-          "when": "view == tiddlywiki-view",
-          "group": "navigation"
-        },
-        {
-          "command": "tiddlywiki.search",
-          "when": "view == tiddlywiki-view",
-          "group": "navigation"
         }
       ]
     }

@@ -137,12 +137,13 @@ function TiddlywikiAPI(host, recipe = "default") {
         const path = `/recipes/default/tiddlers/${encodeURIComponent(title)}`;
 
         // Check if the tiddler exists
-        const existingTiddler = await request(path);
+        const existingResult = await request(path);
 
         // Use TiddlyWiki's built-in tag parser
         const normalizeTags = (input) => parseStringArray(input || []);
 
-        if (existingTiddler) {
+        if (existingResult && existingResult.success) {
+            const existingTiddler = existingResult.data;
             const existingTags = normalizeTags(existingTiddler.tags);
             const mergedTags = [...new Set([...existingTags, ...tags])];
             const existingFields = existingTiddler.fields || {};
