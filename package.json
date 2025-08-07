@@ -1,5 +1,9 @@
 {
   "name": "vscode-tiddlyedit",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/byzheng/vscode-tiddlyedit.git"
+  },
   "displayName": "TiddlyEdit",
   "publisher": "byzheng",
   "license": "MIT",
