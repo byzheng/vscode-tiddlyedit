@@ -6,6 +6,7 @@ const fs = require('fs');
 
 // Initialize TiddlyWiki API
 let tiddlywikiAPI = null;
+let currentWebview = null;
 
 function initializeAPI() {
     const config = vscode.workspace.getConfiguration('tiddlywiki');
@@ -33,27 +34,87 @@ function getWebviewContent(webview, extensionUri) {
     `;
 }
 
+async function refreshWebviewTiddlers(webview) {
+    try {
+        const latest = await tiddlywikiAPI.getLatestTiddlers();
+        if (latest && latest.success) {
+            webview.postMessage({ command: 'updateList', items: latest.data });
+        } else {
+            console.error('Could not fetch latest tiddlers');
+        }
+    } catch (error) {
+        console.error('Error refreshing webview:', error);
+    }
+}
+
+function isInTempDir(filePath) {
+    try {
+        const tempDir = os.tmpdir();
+        let realTempDir = fs.realpathSync(tempDir);
+        let realFile = fs.realpathSync(filePath);
+        // On Windows, ignore case sensitivity
+        if (process.platform === 'win32') {
+            realTempDir = realTempDir.toLowerCase();
+            realFile = realFile.toLowerCase();
+        }
+        return realFile.startsWith(realTempDir + path.sep);
+    } catch {
+        return false; // In case either path doesn't exist
+    }
+}
+
 function activate(context) {
     // Initialize the API
     initializeAPI();
-    
+
+    // Listen for configuration changes
     context.subscriptions.push(
-        
+        vscode.workspace.onDidChangeConfiguration(async event => {
+            if (event.affectsConfiguration('tiddlywiki')) {
+
+                // Close all open .tid files in the temp folder
+                const tempDir = os.tmpdir();
+                // Get all open editors, not just visible ones
+
+                const tabs = vscode.window.tabGroups.all.flatMap(group => group.tabs);
+                for (const tab of tabs) {
+                    if (
+                        tab.input &&
+                        tab.input.uri &&
+                        typeof tab.input.uri.fsPath === 'string' &&
+                        tab.input.uri.fsPath.endsWith('.tid') &&
+                        isInTempDir(tab.input.uri.fsPath)
+                    ) {
+                        await vscode.window.tabGroups.close(tab);
+                    }
+                }
+
+                // // Reinitialize API with new settings
+                // initializeAPI();
+
+                // // Refresh webview if it's open
+                // if (currentWebview) {
+                //     refreshWebviewTiddlers(currentWebview);
+                // }
+
+                // vscode.window.showInformationMessage('TiddlyWiki configuration updated!');
+            }
+        })
+    );
+
+    context.subscriptions.push(
+
         vscode.window.registerWebviewViewProvider('tiddlywiki-webview', {
             resolveWebviewView(webviewView) {
+                currentWebview = webviewView.webview; // Store reference
+
                 webviewView.webview.options = {
                     enableScripts: true
                 };
                 webviewView.webview.html = getWebviewContent(webviewView.webview, context.extensionUri);
+
                 // Fetch and display latest tiddlers when the panel loads
-                (async () => {
-                    const latest = await tiddlywikiAPI.getLatestTiddlers();
-                    if (latest && latest.success) {
-                        webviewView.webview.postMessage({ command: 'updateList', items: latest.data });
-                    } else {
-                        vscode.window.showErrorMessage('Could not fetch latest tiddlers.');
-                    }
-                })();
+                refreshWebviewTiddlers(currentWebview);
                 //webviewView.webview.postMessage({ command: 'updateList', items: latest });
                 // Receive messages from webview
                 webviewView.webview.onDidReceiveMessage(async message => {
@@ -78,11 +139,11 @@ function activate(context) {
                             return;
                         }
                         // console.log('Opening tiddler:', tiddler);
-                        
+
                         const tmpFilePath = path.join(os.tmpdir(), `${tiddler.title}.tid`);
                         fs.writeFileSync(tmpFilePath, tiddler.text || '', 'utf8');
-                                                
-                        
+
+
                         let language = "markdown";
                         if (tiddler.type === "application/javascript") language = "javascript";
                         else if (tiddler.type === "text/css") language = "css";
@@ -93,7 +154,7 @@ function activate(context) {
                         else language = "text";
 
                         const titledDoc = await vscode.workspace.openTextDocument(tmpFilePath);
-                        
+
                         if (language) {
                             await vscode.languages.setTextDocumentLanguage(titledDoc, language);
                         }
@@ -106,25 +167,35 @@ function activate(context) {
         })
     );
 
+    // Register refresh command
+    context.subscriptions.push(
+        vscode.commands.registerCommand('tiddlywiki.refresh', () => {
+            if (currentWebview) {
+                refreshWebviewTiddlers(currentWebview);
+                vscode.window.showInformationMessage('Refreshed TiddlyWiki tiddlers');
+            }
+        })
+    );
+
     vscode.workspace.onDidSaveTextDocument(async (document) => {
         if (!document.fileName.endsWith('.tid')) return;
-        
+
         if (!tiddlywikiAPI) initializeAPI();
-        
+
         const title = path.basename(document.fileName, '.tid');
         const newText = document.getText();
-        
+
         try {
             // Get existing tiddler to preserve other fields
             const existingResult = await tiddlywikiAPI.getTiddlerByTitle(title);
-            
+
             if (!existingResult || !existingResult.success) {
                 vscode.window.showWarningMessage('Cannot find the original tiddler to save changes.');
                 return;
             }
-            
+
             //const existingTiddler = existingResult.data;
-            
+
             // Create updated tiddler with new text
             // Format date as [UTC]YYYY0MM0DD0hh0mm0ss0XXX
             function getTiddlyWikiModifiedDate() {
@@ -144,16 +215,16 @@ function activate(context) {
                 text: newText,
                 modified: getTiddlyWikiModifiedDate()
             };
-            
+
             // Save back to TiddlyWiki using PUT request
             const saveResult = await tiddlywikiAPI.putTiddler(title, [], updatedFields);
-            
+
             if (saveResult && saveResult.success) {
                 vscode.window.setStatusBarMessage(`✅ Tiddler "${title}" saved`, 3000); // shows for 3 seconds
             } else {
                 throw new Error(saveResult?.error?.message || 'Unknown save error');
             }
-            
+
         } catch (err) {
             console.error('Save error:', err);
             vscode.window.showErrorMessage(`❌ Could not save "${title}": ${err.message}`);

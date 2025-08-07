@@ -1,6 +1,7 @@
 {
   "name": "vscode-tiddlyedit",
   "displayName": "TiddlyEdit",
+  "license": "MIT",
   "description": "Seamlessly edit and manage TiddlyWiki tiddlers within VS Code using a REST API connection.",
   "version": "0.0.1",
   "engines": {
@@ -13,7 +14,7 @@
   "main": "./extension.js",
   "contributes": {
     "configuration": {
-      "title": "TiddlyWiki",
+      "title": "TiddlyEdit Configuration",
       "properties": {
         "tiddlywiki.host": {
           "type": "string",
@@ -44,7 +45,14 @@
           "type": "webview"
         }
       ]
-    }
+    },
+    "commands": [
+      {
+        "command": "tiddlywiki.refresh",
+        "title": "Refresh Tiddlers",
+        "icon": "$(refresh)"
+      }
+    ]
   },
   "dependencies": {
     "node-fetch": "^2.6.7"
