@@ -174,7 +174,7 @@ function activate(context) {
             }
         })
     );
-    function getAutoTrigger (value) {
+    function getAutoTrigger(value) {
         if (!autoCompleteConfigure || !Array.isArray(autoCompleteConfigure)) {
             return null;
         }
@@ -224,14 +224,16 @@ function activate(context) {
                     return [];
                 }
                 const optionsData = await getAutoCompleteOptions(value);
-                
+
                 if (!optionsData || !optionsData.options || optionsData.options.length === 0) {
                     quickPick.items = [];
                     return;
                 }
                 currentTrigger = optionsData.trigger;
-                quickPick.items = optionsData.options.map(opt => ({ label: opt.title }));
-                console.log('AutoComplete items:', quickPick.items);
+                quickPick.items = optionsData.options.map(opt => ({
+                    label: opt.title,
+                    alwaysShow: true, // <-- ensure it's not filtered by user input
+                }));
             });
 
             quickPick.onDidAccept(() => {
@@ -242,18 +244,14 @@ function activate(context) {
                         return;
                     }
                     let snippet;
-                    
+
                     if (currentTrigger && currentTrigger.template) {
-                        snippet = currentTrigger.template.replace(/\$options\$/g, selection.label);
-                        if (snippet.includes('$caret$')) {
-                            const caretIndex = snippet.indexOf('$caret$');
-                            snippet = snippet.replace('$caret$', '');
-                            editor.insertSnippet(
-                                new vscode.SnippetString(snippet.slice(0, caretIndex) + '$0' + snippet.slice(caretIndex)),
-                                editor.selection.active
-                            );
-                            return;
-                        }
+                        console.log('Using template for snippet:', currentTrigger.template);
+                        console.log('Selected option:', selection.label);
+                        const caretIndex = currentTrigger.template.indexOf("$caret$");
+                        snippet =  currentTrigger.template
+                            .replace("$option$", selection.label)
+                            .replace("$caret$", "$0");
                     } else {
                         snippet = `[[${selection.label}]] `;
                     }
