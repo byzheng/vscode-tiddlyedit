@@ -8,10 +8,13 @@
   "publisher": "byzheng",
   "license": "MIT",
   "description": "Seamlessly edit and manage TiddlyWiki tiddlers within VS Code using a REST API connection.",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "engines": {
     "vscode": "^1.102.0"
   },
+  "extensionDependencies": [
+    "joshua-fontany.tw5-syntax"
+  ],
   "categories": [
     "Other"
   ],
