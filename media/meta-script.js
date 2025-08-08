@@ -28,11 +28,20 @@ document.addEventListener('DOMContentLoaded', function() {
         // Title
         const titleSection = createSection('Basic Information');
         titleSection.appendChild(createField('Title', tiddler.title || 'Untitled'));
-        if (tiddler.type) titleSection.appendChild(createField('Type', tiddler.type));
-        if (tiddler.created) titleSection.appendChild(createField('Created', formatDate(tiddler.created)));
-        if (tiddler.modified) titleSection.appendChild(createField('Modified', formatDate(tiddler.modified)));
-        if (tiddler.creator) titleSection.appendChild(createField('Creator', tiddler.creator));
-        if (tiddler.modifier) titleSection.appendChild(createField('Modifier', tiddler.modifier));
+        const fields = [
+            { key: 'type', label: 'Type' },
+            { key: 'created', label: 'Created', format: formatDate },
+            { key: 'modified', label: 'Modified', format: formatDate },
+            { key: 'creator', label: 'Creator' },
+            { key: 'modifier', label: 'Modifier' }
+        ];
+
+        fields.forEach(field => {
+            if (tiddler[field.key]) {
+                const value = field.format ? field.format(tiddler[field.key]) : tiddler[field.key];
+                titleSection.appendChild(createField(field.label, value));
+            }
+        });
         metaContent.appendChild(titleSection);
 
         // Tags
@@ -52,10 +61,9 @@ document.addEventListener('DOMContentLoaded', function() {
             tagsSection.appendChild(tagsContainer);
             metaContent.appendChild(tagsSection);
         }
-        console.log(tiddler)
         // Custom Fields
-        const customFields = getCustomFields(tiddler);
-        console.log('Custom Fields:', customFields);
+        const customFields = getCustomFields(tiddler.fields);
+
         if (customFields.length > 0) {
             const customSection = createSection('Custom Fields');
             customFields.forEach(field => {
