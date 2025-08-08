@@ -41,6 +41,8 @@ You can configure these in your VS Code settings.
 ## Configuration of TiddlyWiki
 
 * Reduce [Sync Polling Interval](https://tiddlywiki.com/#Hidden%20Setting%3A%20Sync%20Polling%20Interval) from server to client through creating a config tiddler `$:/config/SyncPollingInterval` (e.g., `1000` for 1 second). The default value is `60000` (60 seconds).
+* [Auto Complete](https://github.com/EvidentlyCube/TW5-AutoComplete) plugin uses tag `$:/tags/EC/AutoComplete/Trigger` for triggers. Switched on the Hidden Setting `Sync System Tiddlers` by setting `$:/config/SyncSystemTiddlersFromServer` to `yes` to allow system tiddlers are returned by web API.
+
 
 ## Release Notes
 
