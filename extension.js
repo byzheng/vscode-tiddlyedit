@@ -67,9 +67,17 @@ function activate(context) {
         fs.mkdirSync(tempFolder);
     }
     let autoCompleteConfigure;
-    tiddlywikiAPI.getAutoCompleteConfigure().then(conf => {
-        autoCompleteConfigure = conf;
-    });
+    
+
+    // Initialize autocomplete configuration
+    (async () => {
+        try {
+            autoCompleteConfigure = await tiddlywikiAPI.getAutoCompleteConfigure();
+        } catch (error) {
+            console.error('Failed to load autocomplete configuration:', error);
+        }
+    })();
+
 
     function isInTempDir(filePath) {
         try {
@@ -259,8 +267,6 @@ function activate(context) {
                     let snippet;
 
                     if (currentTrigger && currentTrigger.template) {
-                        console.log('Using template for snippet:', currentTrigger.template);
-                        console.log('Selected option:', selection.label);
                         const caretIndex = currentTrigger.template.indexOf("$caret$");
                         snippet = currentTrigger.template
                             .replace("$option$", selection.label)
