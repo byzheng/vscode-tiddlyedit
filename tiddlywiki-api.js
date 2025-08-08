@@ -204,7 +204,8 @@ function TiddlywikiAPI(host, recipe = "default") {
                 tags: mergedTags // ensure tags is always the mergedTags array
             };
 
-            return request(path, "PUT", updatedTiddler);
+            const result = await request(path, "PUT", updatedTiddler);
+            return result;
         } else {
             const newTiddler = {
                 title,
@@ -212,7 +213,8 @@ function TiddlywikiAPI(host, recipe = "default") {
                 ...fields
             };
 
-            return request(path, "PUT", newTiddler);
+            const result = await request(path, "PUT", newTiddler);
+            return result;
         }
     }
 
