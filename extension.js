@@ -140,7 +140,14 @@ function activate(context) {
 
                 // Fetch and display latest tiddlers when the panel loads
                 refreshWebviewTiddlers(currentWebview);
-                //webviewView.webview.postMessage({ command: 'updateList', items: latest });
+                
+                webviewView.onDidChangeVisibility(() => {
+                    if (!webviewView.visible) {
+                        return;
+                    }
+                    refreshWebviewTiddlers(currentWebview);
+                });
+
                 // Receive messages from webview
                 webviewView.webview.onDidReceiveMessage(async message => {
                     if (message.command === 'search') {
