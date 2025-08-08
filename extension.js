@@ -6,7 +6,9 @@ const fs = require('fs');
 
 // Initialize TiddlyWiki API
 let tiddlywikiAPI = null;
-let currentWebview = null;
+let tiddlersWebview = null;
+let metaWebview = null;
+let selectedTiddler = null;
 
 function getTiddlyWikiHost() {
     // Use environment variable in debug mode, otherwise use user config
@@ -25,22 +27,139 @@ function initializeAPI() {
     return tiddlywikiAPI;
 }
 
-function getWebviewContent(webview, extensionUri) {
+function getTiddlersWebviewContent(webview, extensionUri) {
     const scriptUri = webview.asWebviewUri(
-        vscode.Uri.joinPath(extensionUri, 'media', 'script.js')
+        vscode.Uri.joinPath(extensionUri, 'media', 'tiddlers-script.js')
     );
     const styleUri = webview.asWebviewUri(
         vscode.Uri.joinPath(extensionUri, 'media', 'style.css')
     );
-    return `
-    <div style="display: flex; align-items: center;">
-        <input type="text" id="tw-search" placeholder="Search tiddlers..." style="flex:1;" />
-        <button id="tw-refresh" title="Refresh" style="margin-left: 8px;">&#x21bb;</button>
-    </div>
-    <ul id="tw-tiddler-list"></ul>
-    <script src="${scriptUri}"></script>
-    <link rel="stylesheet" type="text/css" href="${styleUri}" />
-    `;
+    return `<!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link rel="stylesheet" type="text/css" href="${styleUri}" />
+        <title>TiddlyWiki Tiddlers</title>
+    </head>
+    <body>
+        <div class="search-container">
+            <input type="text" id="tw-search" placeholder="Search tiddlers..." />
+            <button id="tw-refresh" title="Refresh">🔄</button>
+        </div>
+        <ul id="tw-tiddler-list"></ul>
+        <script src="${scriptUri}"></script>
+    </body>
+    </html>`;
+}
+
+function getMetaWebviewContent(webview, extensionUri) {
+    const scriptUri = webview.asWebviewUri(
+        vscode.Uri.joinPath(extensionUri, 'media', 'meta-script.js')
+    );
+    const styleUri = webview.asWebviewUri(
+        vscode.Uri.joinPath(extensionUri, 'media', 'style.css')
+    );
+    return `<!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link rel="stylesheet" type="text/css" href="${styleUri}" />
+        <title>TiddlyWiki Meta</title>
+    </head>
+    <body>
+        <div id="meta-container">
+            <div id="no-selection">Select a tiddler to view its metadata</div>
+            <div id="meta-content" style="display: none;"></div>
+        </div>
+        <script src="${scriptUri}"></script>
+    </body>
+    </html>`;
+}
+
+async function loadTiddlersIntoWebview() {
+    if (!tiddlersWebview) return;
+    
+    try {
+        const results = await tiddlywikiAPI.getLatestTiddlers();
+        if (results && results.success) {
+            tiddlersWebview.postMessage({ 
+                command: 'updateList', 
+                items: results.data || []
+            });
+        }
+    } catch (error) {
+        console.error('Error loading tiddlers:', error);
+    }
+}
+
+async function searchTiddlers(searchText) {
+    if (!tiddlersWebview) return;
+    
+    try {
+        let results;
+        if (!searchText || searchText.trim() === '') {
+            results = await tiddlywikiAPI.getLatestTiddlers();
+        } else {
+            results = await tiddlywikiAPI.searchTiddlers(searchText);
+        }
+        
+        if (results && results.success) {
+            tiddlersWebview.postMessage({ 
+                command: 'updateList', 
+                items: results.data || []
+            });
+        }
+    } catch (error) {
+        console.error('Error searching tiddlers:', error);
+    }
+}
+
+async function updateMetaPanel(tiddler) {
+    if (!metaWebview) return;
+    
+    try {
+        const result = await tiddlywikiAPI.getTiddlerByTitle(tiddler.title);
+        if (result && result.success) {
+            metaWebview.postMessage({
+                command: 'showMeta',
+                tiddler: result.data
+            });
+        }
+    } catch (error) {
+        console.error('Error updating meta panel:', error);
+    }
+}
+
+async function openTiddlerForEditing(tiddler) {
+    try {
+        const result = await tiddlywikiAPI.getTiddlerByTitle(tiddler.title);
+        if (!result || !result.success) {
+            vscode.window.showErrorMessage(`Could not fetch tiddler: ${tiddler.title}`);
+            return;
+        }
+
+        const tiddlerData = result.data;
+        const tmpFilePath = path.join(os.tmpdir(), `${tiddlerData.title}.tid`);
+        fs.writeFileSync(tmpFilePath, tiddlerData.text || '', 'utf8');
+
+        let language = "tiddlywiki5";
+        if (tiddlerData.type === "application/javascript") language = "javascript";
+        else if (tiddlerData.type === "text/css") language = "css";
+        else if (tiddlerData.type === "application/json") language = "json";
+        else if (tiddlerData.type === "text/html") language = "html";
+        else if (tiddlerData.type === "text/markdown" || tiddlerData.type === "text/x-markdown") language = "markdown";
+        else if (tiddlerData.type === "text/vnd.tiddlywiki") language = "tiddlywiki5";
+        else language = "text";
+
+        const doc = await vscode.workspace.openTextDocument(tmpFilePath);
+        await vscode.languages.setTextDocumentLanguage(doc, language);
+        await vscode.window.showTextDocument(doc);
+
+    } catch (error) {
+        vscode.window.showErrorMessage(`Error opening tiddler: ${error.message}`);
+    }
 }
 
 async function refreshWebviewTiddlers(webview) {
@@ -128,77 +247,48 @@ function activate(context) {
     );
 
     context.subscriptions.push(
-
-        vscode.window.registerWebviewViewProvider('tiddlywiki-webview', {
+        // Tiddlers webview provider
+        vscode.window.registerWebviewViewProvider('tiddlywiki-tiddlers', {
             resolveWebviewView(webviewView) {
-                currentWebview = webviewView.webview; // Store reference
+                tiddlersWebview = webviewView.webview;
 
                 webviewView.webview.options = {
                     enableScripts: true
                 };
-                webviewView.webview.html = getWebviewContent(webviewView.webview, context.extensionUri);
+                webviewView.webview.html = getTiddlersWebviewContent(webviewView.webview, context.extensionUri);
 
-                // Fetch and display latest tiddlers when the panel loads
-                refreshWebviewTiddlers(currentWebview);
+                // Load initial tiddlers when panel loads
+                loadTiddlersIntoWebview();
                 
-                webviewView.onDidChangeVisibility(() => {
-                    if (!webviewView.visible) {
-                        return;
-                    }
-                    refreshWebviewTiddlers(currentWebview);
-                });
-
-                // Receive messages from webview
+                // Receive messages from tiddlers webview
                 webviewView.webview.onDidReceiveMessage(async message => {
                     if (message.command === 'search') {
-                        let results;
-                        if (message.text === undefined || message.text === null || message.text === '') {
-                            results = await tiddlywikiAPI.getLatestTiddlers();
-                        } else {
-                            results = await tiddlywikiAPI.searchTiddlers(message.text);
-                        }
-                        if (!results || !results.success) {
-                            vscode.window.showErrorMessage(`Could not search tiddlers by: ${message.text}`);
-                            return;
-                        }
-                        webviewView.webview.postMessage({ command: 'updateList', items: results.data });
-                    }
-                    if (message.command === 'openTiddler') {
-                        const result = await tiddlywikiAPI.getTiddlerByTitle(message.item.title);
-                        if (!result || !result.success) {
-                            vscode.window.showErrorMessage(`Could not fetch tiddler: ${message.item.title}`);
-                            return;
-                        }
-                        const tiddler = result.data;
-                        if (!tiddler) {
-                            vscode.window.showErrorMessage(`Could not fetch tiddler: ${message.item.title}`);
-                            return;
-                        }
-                        // console.log('Opening tiddler:', tiddler);
-
-                        const tmpFilePath = path.join(tempFolder, `${tiddler.title}.tid`);
-                        fs.writeFileSync(tmpFilePath, tiddler.text || '', 'utf8');
-
-
-                        let language = "tiddlywiki5";
-                        if (tiddler.type === "application/javascript") language = "javascript";
-                        else if (tiddler.type === "text/css") language = "css";
-                        else if (tiddler.type === "application/json") language = "json";
-                        else if (tiddler.type === "text/html") language = "html";
-                        else if (tiddler.type === "text/markdown" || tiddler.type === "text/x-markdown") language = "markdown";
-                        else if (tiddler.type === "text/vnd.tiddlywiki") language = "tiddlywiki5";
-                        else language = "text";
-                        //console.log('Opening tiddler with language:', language);
-                        const titledDoc = await vscode.workspace.openTextDocument(tmpFilePath);
-
-                        if (language) {
-                            await vscode.languages.setTextDocumentLanguage(titledDoc, language);
-                        }
-                        await vscode.window.showTextDocument(titledDoc);
-
-                        return;
+                        await searchTiddlers(message.text);
+                    } else if (message.command === 'refresh') {
+                        await loadTiddlersIntoWebview();
+                    } else if (message.command === 'selectTiddler') {
+                        // Update selected tiddler and notify meta panel
+                        selectedTiddler = message.tiddler;
+                        await updateMetaPanel(message.tiddler);
+                    } else if (message.command === 'openTiddler') {
+                        await openTiddlerForEditing(message.tiddler);
                     }
                 });
+            }
+        }),
+
+        // Meta webview provider
+        vscode.window.registerWebviewViewProvider('tiddlywiki-meta', {
+            resolveWebviewView(webviewView) {
+                metaWebview = webviewView.webview;
+
+                webviewView.webview.options = {
+                    enableScripts: true
+                };
+                webviewView.webview.html = getMetaWebviewContent(webviewView.webview, context.extensionUri);
+
+                // Show initial empty state
+                metaWebview.postMessage({ command: 'clearMeta' });
             }
         })
     );

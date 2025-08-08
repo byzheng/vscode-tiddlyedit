@@ -48,8 +48,13 @@
     "views": {
       "tiddlywiki-container": [
         {
-          "id": "tiddlywiki-webview",
-          "name": "TiddlyWiki Search",
+          "id": "tiddlywiki-tiddlers",
+          "name": "Tiddlers",
+          "type": "webview"
+        },
+        {
+          "id": "tiddlywiki-meta",
+          "name": "Meta",
           "type": "webview"
         }
       ]
