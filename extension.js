@@ -31,6 +31,9 @@ function getTiddlersWebviewContent(webview, extensionUri) {
     const scriptUri = webview.asWebviewUri(
         vscode.Uri.joinPath(extensionUri, 'media', 'tiddlers-script.js')
     );
+    const sharedUtilsUri = webview.asWebviewUri(
+        vscode.Uri.joinPath(extensionUri, 'media', 'shared-utils.js')
+    );
     const styleUri = webview.asWebviewUri(
         vscode.Uri.joinPath(extensionUri, 'media', 'style.css')
     );
@@ -48,6 +51,7 @@ function getTiddlersWebviewContent(webview, extensionUri) {
             <button id="tw-refresh" title="Refresh">🔄</button>
         </div>
         <ul id="tw-tiddler-list"></ul>
+        <script src="${sharedUtilsUri}"></script>
         <script src="${scriptUri}"></script>
     </body>
     </html>`;
@@ -56,6 +60,9 @@ function getTiddlersWebviewContent(webview, extensionUri) {
 function getMetaWebviewContent(webview, extensionUri) {
     const scriptUri = webview.asWebviewUri(
         vscode.Uri.joinPath(extensionUri, 'media', 'meta-script.js')
+    );
+    const sharedUtilsUri = webview.asWebviewUri(
+        vscode.Uri.joinPath(extensionUri, 'media', 'shared-utils.js')
     );
     const styleUri = webview.asWebviewUri(
         vscode.Uri.joinPath(extensionUri, 'media', 'style.css')
@@ -73,6 +80,7 @@ function getMetaWebviewContent(webview, extensionUri) {
             <div id="no-selection">Select a tiddler to view its metadata</div>
             <div id="meta-content" style="display: none;"></div>
         </div>
+        <script src="${sharedUtilsUri}"></script>
         <script src="${scriptUri}"></script>
     </body>
     </html>`;

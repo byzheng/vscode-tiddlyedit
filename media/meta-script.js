@@ -1,3 +1,4 @@
+
 // Meta webview script
 const vscode = acquireVsCodeApi();
 
@@ -37,7 +38,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Tags
         if (tiddler.tags && tiddler.tags.length > 0) {
             const tagsSection = createSection('Tags');
-            const tags = Array.isArray(tiddler.tags) ? tiddler.tags : [tiddler.tags];
+            const tags = parseStringArray(tiddler.tags);
             const tagsContainer = document.createElement('div');
             tagsContainer.className = 'tags-container';
             
@@ -51,9 +52,10 @@ document.addEventListener('DOMContentLoaded', function() {
             tagsSection.appendChild(tagsContainer);
             metaContent.appendChild(tagsSection);
         }
-
+        console.log(tiddler)
         // Custom Fields
         const customFields = getCustomFields(tiddler);
+        console.log('Custom Fields:', customFields);
         if (customFields.length > 0) {
             const customSection = createSection('Custom Fields');
             customFields.forEach(field => {
@@ -63,15 +65,15 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         // Text preview (first 200 characters)
-        if (tiddler.text) {
-            const textSection = createSection('Text Preview');
-            const textPreview = document.createElement('div');
-            textPreview.className = 'text-preview';
-            textPreview.textContent = tiddler.text.substring(0, 200) + 
-                (tiddler.text.length > 200 ? '...' : '');
-            textSection.appendChild(textPreview);
-            metaContent.appendChild(textSection);
-        }
+        // if (tiddler.text) {
+        //     const textSection = createSection('Text Preview');
+        //     const textPreview = document.createElement('div');
+        //     textPreview.className = 'text-preview';
+        //     textPreview.textContent = tiddler.text.substring(0, 200) + 
+        //         (tiddler.text.length > 200 ? '...' : '');
+        //     textSection.appendChild(textPreview);
+        //     metaContent.appendChild(textSection);
+        // }
     }
 
     function clearMeta() {
@@ -118,7 +120,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 customFields.push({ key: key, value: String(value) });
             }
         }
-        
+        console.log('Custom Fields:', customFields);
         return customFields;
     }
 
