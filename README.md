@@ -15,6 +15,7 @@
 - **Syntax Highlighting:** Enhanced readability for TiddlyWiki markup using [TiddlyWiki5 Syntax](https://github.com/joshuafontany/VSCode-TW5-Syntax).
 - **Edit Tiddlers:** Quickly edit and save tiddlers.
 - **Auto Completion:** Auto complete using [Auto Complete](https://github.com/EvidentlyCube/TW5-AutoComplete) plugin for TiddlyWiki. Triggered by `Ctrl+Space`.
+- **Meta Information:** View tiddler metadata.
 
 ## Requirements
 
@@ -46,6 +47,9 @@ You can configure these in your VS Code settings.
 
 ## Release Notes
 
+### 0.0.3
+
+- Improved meta information display for tiddlers.
 
 ### 0.0.2
 
