@@ -1,6 +1,6 @@
 // Tiddlers webview script
 const vscode = acquireVsCodeApi();
-
+const { parseStringArray } = require('./tiddlywiki-api.js');
 document.addEventListener('DOMContentLoaded', function() {
     const searchInput = document.getElementById('tw-search');
     const refreshButton = document.getElementById('tw-refresh');
@@ -70,21 +70,19 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Click handlers
             li.addEventListener('click', function() {
+                // Highlight selected item
+                document.querySelectorAll('.tiddler-item').forEach(item => {
+                    item.classList.remove('selected');
+                });
+                li.classList.add('selected');
+                
                 // Select this tiddler and notify meta panel
                 vscode.postMessage({
                     command: 'selectTiddler',
                     tiddler: tiddler
                 });
                 
-                // Highlight selected item
-                document.querySelectorAll('.tiddler-item').forEach(item => {
-                    item.classList.remove('selected');
-                });
-                li.classList.add('selected');
-            });
-            
-            // Double-click to open for editing
-            li.addEventListener('dblclick', function() {
+                // Open tiddler for editing
                 vscode.postMessage({
                     command: 'openTiddler',
                     tiddler: tiddler

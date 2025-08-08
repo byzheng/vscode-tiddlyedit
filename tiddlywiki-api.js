@@ -232,5 +232,5 @@ function TiddlywikiAPI(host, recipe = "default") {
     };
 }
 
-module.exports = { TiddlywikiAPI };
+module.exports = { TiddlywikiAPI, parseStringArray };
 
