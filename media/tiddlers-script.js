@@ -1,6 +1,33 @@
 // Tiddlers webview script
 const vscode = acquireVsCodeApi();
-const { parseStringArray } = require('./tiddlywiki-api.js');
+
+// TiddlyWiki string array parser (copied from tiddlywiki-api.js)
+function parseStringArray(value, allowDuplicate = false) {
+    if (typeof value === "string") {
+        const memberRegExp = /(?:^|[^\S\xA0])(?:\[\[(.*?)\]\])(?=[^\S\xA0]|$)|([\S\xA0]+)/mg;
+        const results = [];
+        const names = {};
+        let match;
+        do {
+            match = memberRegExp.exec(value);
+            if (match) {
+                const item = match[1] || match[2];
+                if (item !== undefined && (!names.hasOwnProperty(item) || allowDuplicate)) {
+                    results.push(item);
+                    names[item] = true;
+                }
+            }
+        } while (match);
+        return results;
+    } else if (Array.isArray(value)) {
+        return value;
+    } else {
+        return null;
+    }
+}
+
+
+
 document.addEventListener('DOMContentLoaded', function() {
     const searchInput = document.getElementById('tw-search');
     const refreshButton = document.getElementById('tw-refresh');
@@ -59,7 +86,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const tagsDiv = document.createElement('div');
             tagsDiv.className = 'tiddler-tags';
             if (tiddler.tags) {
-                const tags = Array.isArray(tiddler.tags) ? tiddler.tags : [tiddler.tags];
+                const tags = parseStringArray(tiddler.tags);
                 tagsDiv.textContent = tags.join(', ');
             }
             
