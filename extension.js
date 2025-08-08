@@ -181,7 +181,7 @@ function activate(context) {
                         else if (tiddler.type === "text/markdown" || tiddler.type === "text/x-markdown") language = "markdown";
                         else if (tiddler.type === "text/vnd.tiddlywiki") language = "tiddlywiki5";
                         else language = "text";
-                        console.log('Opening tiddler with language:', language);
+                        //console.log('Opening tiddler with language:', language);
                         const titledDoc = await vscode.workspace.openTextDocument(tmpFilePath);
 
                         if (language) {
