@@ -9,6 +9,7 @@ let tiddlywikiAPI = null;
 let tiddlersWebview = null;
 let metaWebview = null;
 let selectedTiddler = null;
+let ws = null;
 
 function getTiddlyWikiHost() {
     // Use environment variable in debug mode, otherwise use user config
@@ -25,6 +26,45 @@ function initializeAPI() {
     const recipe = config.get('recipe', 'default');
     tiddlywikiAPI = TiddlywikiAPI(host, recipe);
     return tiddlywikiAPI;
+}
+
+
+
+function connectWebSocket(reconnect = false) {
+    console.log('Connecting to TiddlyWiki WebSocket...');
+    const config = vscode.workspace.getConfiguration('tiddlywiki');
+    let host = getTiddlyWikiHost();
+    // Remove protocol if present (http:// or https://)
+    host = host.replace(/^https?:\/\//, '');
+    if (ws && ws.readyState !== WebSocket.CLOSED && reconnect) {
+        ws.close();
+        ws = null;
+    }
+    if (ws && ws.readyState === WebSocket.OPEN) return ws;
+    ws = new WebSocket(`ws://${host}/ws`);
+    ws.onopen = () => {
+        console.log('WebSocket connection established');
+    };
+    ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        console.log('WebSocket message received:', data);
+        if (data.type === 'edit-tiddler') {
+            // Open tiddler for editing in the editor
+            (async () => {
+                await openTiddlerForEditing(data);
+            })();
+        }
+    };
+    ws.onclose = () => {
+        console.log('WebSocket closed, attempting reconnect in 3s...');
+        //setTimeout(() => connectWebSocket(true), 3000);
+    };
+
+    ws.onerror = (err) => {
+        console.error('WebSocket error:', err);
+    };
+
+    return ws;
 }
 
 function getTiddlersWebviewContent(webview, extensionUri) {
@@ -88,12 +128,12 @@ function getMetaWebviewContent(webview, extensionUri) {
 
 async function loadTiddlersIntoWebview() {
     if (!tiddlersWebview) return;
-    
+
     try {
         const results = await tiddlywikiAPI.getLatestTiddlers();
         if (results && results.success) {
-            tiddlersWebview.postMessage({ 
-                command: 'updateList', 
+            tiddlersWebview.postMessage({
+                command: 'updateList',
                 items: results.data || []
             });
         }
@@ -104,7 +144,7 @@ async function loadTiddlersIntoWebview() {
 
 async function searchTiddlers(searchText) {
     if (!tiddlersWebview) return;
-    
+
     try {
         let results;
         if (!searchText || searchText.trim() === '') {
@@ -112,10 +152,10 @@ async function searchTiddlers(searchText) {
         } else {
             results = await tiddlywikiAPI.searchTiddlers(searchText);
         }
-        
+
         if (results && results.success) {
-            tiddlersWebview.postMessage({ 
-                command: 'updateList', 
+            tiddlersWebview.postMessage({
+                command: 'updateList',
                 items: results.data || []
             });
         }
@@ -126,7 +166,7 @@ async function searchTiddlers(searchText) {
 
 async function updateMetaPanel(tiddler) {
     if (!metaWebview) return;
-    
+
     try {
         const result = await tiddlywikiAPI.getTiddlerByTitle(tiddler.title);
         if (result && result.success) {
@@ -187,6 +227,7 @@ async function refreshWebviewTiddlers(webview) {
 function activate(context) {
     // Initialize the API
     initializeAPI();
+    connectWebSocket();
 
     const tempFolder = path.join(os.tmpdir(), 'tiddlyedit-temp');
     // Create it once if it doesn’t exist
@@ -194,7 +235,7 @@ function activate(context) {
         fs.mkdirSync(tempFolder);
     }
     let autoCompleteConfigure;
-    
+
 
     // Initialize autocomplete configuration
     (async () => {
@@ -244,6 +285,8 @@ function activate(context) {
 
                 // Reinitialize API with new settings
                 initializeAPI();
+                // reconnect WebSocket
+                connectWebSocket(true);
 
                 // Refresh webview if it's open
                 if (currentWebview) {
@@ -267,7 +310,7 @@ function activate(context) {
 
                 // Load initial tiddlers when panel loads
                 loadTiddlersIntoWebview();
-                
+
                 // Receive messages from tiddlers webview
                 webviewView.webview.onDidReceiveMessage(async message => {
                     if (message.command === 'search') {
