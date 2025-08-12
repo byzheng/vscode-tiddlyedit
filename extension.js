@@ -31,8 +31,13 @@ function initializeAPI() {
 
 let reconnectAttempts = 0;
 const maxReconnectDelay = 30000;
+const MAX_RECONNECT_ATTEMPTS = 10;
 
 function connectWebSocket(tempFolder, reconnect = false) {
+    if (reconnect && reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+        console.warn("Max reconnect attempts reached. Stopping.");
+        return;
+    }
     console.log('Connecting to TiddlyWiki WebSocket...');
     const config = vscode.workspace.getConfiguration('tiddlywiki');
     let host = getTiddlyWikiHost();
