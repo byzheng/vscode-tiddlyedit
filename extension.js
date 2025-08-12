@@ -92,6 +92,21 @@ function connectWebSocket(tempFolder, reconnect = false) {
     return ws;
 }
 
+
+// Detect system wake using timer
+let lastTick = Date.now();
+setInterval(() => {
+    const now = Date.now();
+    if (now - lastTick > 10000) { // system was asleep/paused > 10s
+        console.log("System wake detected, checking WS connection...");
+        if (!ws || ws.readyState === WebSocket.CLOSED) {
+            connectWebSocket(tempFolder, true);
+        }
+    }
+    lastTick = now;
+}, 5000);
+
+
 function getTiddlersWebviewContent(webview, extensionUri) {
     const scriptUri = webview.asWebviewUri(
         vscode.Uri.joinPath(extensionUri, 'media', 'tiddlers-script.js')
@@ -257,7 +272,7 @@ function activate(context) {
     if (!fs.existsSync(tempFolder)) {
         fs.mkdirSync(tempFolder);
     }
-    
+
     connectWebSocket(tempFolder);
 
     let autoCompleteConfigure;
@@ -312,7 +327,7 @@ function activate(context) {
                 // Reinitialize API with new settings
                 initializeAPI();
                 // reconnect WebSocket
-                connectWebSocket(tempFolder,true);
+                connectWebSocket(tempFolder, true);
 
                 // Refresh webview if it's open
                 if (currentWebview) {
