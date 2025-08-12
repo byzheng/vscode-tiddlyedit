@@ -30,7 +30,7 @@ function initializeAPI() {
 
 
 
-function connectWebSocket(reconnect = false) {
+function connectWebSocket(tempFolder, reconnect = false) {
     console.log('Connecting to TiddlyWiki WebSocket...');
     const config = vscode.workspace.getConfiguration('tiddlywiki');
     let host = getTiddlyWikiHost();
@@ -47,17 +47,17 @@ function connectWebSocket(reconnect = false) {
     };
     ws.onmessage = (event) => {
         const data = JSON.parse(event.data);
-        console.log('WebSocket message received:', data);
+        // console.log('WebSocket message received:', data);
         if (data.type === 'edit-tiddler') {
             // Open tiddler for editing in the editor
             (async () => {
-                await openTiddlerForEditing(data);
+                await openTiddlerForEditing(data, tempFolder);
             })();
         }
     };
     ws.onclose = () => {
         console.log('WebSocket closed, attempting reconnect in 3s...');
-        //setTimeout(() => connectWebSocket(true), 3000);
+        setTimeout(() => connectWebSocket(tempFolder, true), 3000);
     };
 
     ws.onerror = (err) => {
@@ -180,7 +180,7 @@ async function updateMetaPanel(tiddler) {
     }
 }
 
-async function openTiddlerForEditing(tiddler) {
+async function openTiddlerForEditing(tiddler, tempFolder) {
     try {
         const result = await tiddlywikiAPI.getTiddlerByTitle(tiddler.title);
         if (!result || !result.success) {
@@ -189,7 +189,7 @@ async function openTiddlerForEditing(tiddler) {
         }
 
         const tiddlerData = result.data;
-        const tmpFilePath = path.join(os.tmpdir(), `${tiddlerData.title}.tid`);
+        const tmpFilePath = path.join(tempFolder, `${tiddlerData.title}.tid`);
         fs.writeFileSync(tmpFilePath, tiddlerData.text || '', 'utf8');
 
         let language = "tiddlywiki5";
@@ -227,13 +227,14 @@ async function refreshWebviewTiddlers(webview) {
 function activate(context) {
     // Initialize the API
     initializeAPI();
-    connectWebSocket();
-
     const tempFolder = path.join(os.tmpdir(), 'tiddlyedit-temp');
     // Create it once if it doesn’t exist
     if (!fs.existsSync(tempFolder)) {
         fs.mkdirSync(tempFolder);
     }
+    
+    connectWebSocket(tempFolder);
+
     let autoCompleteConfigure;
 
 
@@ -286,7 +287,7 @@ function activate(context) {
                 // Reinitialize API with new settings
                 initializeAPI();
                 // reconnect WebSocket
-                connectWebSocket(true);
+                connectWebSocket(tempFolder,true);
 
                 // Refresh webview if it's open
                 if (currentWebview) {
@@ -322,7 +323,7 @@ function activate(context) {
                         selectedTiddler = message.tiddler;
                         await updateMetaPanel(message.tiddler);
                     } else if (message.command === 'openTiddler') {
-                        await openTiddlerForEditing(message.tiddler);
+                        await openTiddlerForEditing(message.tiddler, tempFolder);
                     }
                 });
 
@@ -450,6 +451,8 @@ function activate(context) {
     );
 
     vscode.workspace.onDidSaveTextDocument(async (document) => {
+        if (!document || !document.fileName) return;
+        if (!isInTempDir(document.fileName)) return; //ignore if not in temp dir
         if (!document.fileName.endsWith('.tid')) return;
 
         if (!tiddlywikiAPI) initializeAPI();
