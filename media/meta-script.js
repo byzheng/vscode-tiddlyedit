@@ -113,19 +113,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 alert("No tiddler selected");
                 return;
             }
-            const config = vscode.getState()?.wsConfig || { host: "localhost", port: 8080 };
-            console.log(`Connecting to WebSocket at ws://${config.host}:${config.port}/ws`);
-            const ws = new WebSocket(`ws://${config.host}:${config.port}/ws`);
-            ws.addEventListener("open", () => {
-                ws.send(JSON.stringify({
-                    type: "open-tiddler",
-                    title: tiddler.title
-                }));
-                ws.close();
-            });
-            ws.addEventListener("error", (err) => {
-                console.error("WebSocket error:", err);
-                alert("Failed to connect to TiddlyWiki WebSocket server");
+            alert("Opening tiddler in TiddlyWiki: " + tiddler.title);
+            vscode.postMessage({
+                command: "openTiddlerInTiddlywiki",
+                tiddler: tiddler
             });
         });
         return buttonContainer;

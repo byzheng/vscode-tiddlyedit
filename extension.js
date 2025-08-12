@@ -325,6 +325,7 @@ function activate(context) {
                         await openTiddlerForEditing(message.tiddler);
                     }
                 });
+
             }
         }),
 
@@ -340,9 +341,25 @@ function activate(context) {
 
                 // Show initial empty state
                 metaWebview.postMessage({ command: 'clearMeta' });
+                webviewView.webview.onDidReceiveMessage(async message => {
+                    if (message.command === 'openTiddlerInTiddlywiki') {
+
+                        sendOpenTiddlerToWebSocket(message.tiddler);
+                    }
+                });
             }
         })
     );
+    function sendOpenTiddlerToWebSocket(tiddler) {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({
+                type: "open-tiddler",
+                title: tiddler.title
+            }));
+        } else {
+            vscode.window.showWarningMessage('WebSocket is not connected.');
+        }
+    }
     function getAutoTrigger(value) {
         if (!autoCompleteConfigure || !Array.isArray(autoCompleteConfigure)) {
             return null;
