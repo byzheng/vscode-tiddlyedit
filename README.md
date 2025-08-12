@@ -16,6 +16,7 @@
 - **Edit Tiddlers:** Quickly edit and save tiddlers.
 - **Auto Completion:** Auto complete using [Auto Complete](https://github.com/EvidentlyCube/TW5-AutoComplete) plugin for TiddlyWiki. Triggered by `Ctrl+Space`.
 - **Meta Information:** View tiddler metadata.
+- **Bidirectional Edit and View:** View a tiddler in the browser and send a tiddler from browser to edit it in VS Code.
 
 ## Requirements
 
@@ -29,6 +30,7 @@
 3. Open a tiddler to edit. The tiddler is saved into temporary folder with filename `title.tid` and content as tiddler text field.
 4. Save your changes to update the tiddler in your TiddlyWiki instance through WebAPI.
 5. Your browser will automatically refresh to show the updated tiddler. The sync interval is determined by the TiddlyWiki hidden configuration [Sync Polling Interval](https://tiddlywiki.com/#Hidden%20Setting%3A%20Sync%20Polling%20Interval).
+6. Install [tw-livebridge](https://github.com/byzheng/tw-livebridge) to enable bidirectional editing, i.e. Open a tiddler in the browser from VS Code and edit a tiddler in VS Code from the browser.
 
 ## Extension Settings
 
@@ -49,13 +51,8 @@ You can configure these in your VS Code settings.
 
 ### 0.0.3
 
+- Open a tiddler in browser and edit a tiddler in vs code from browser.
 - Improved meta information display for tiddlers.
-
-### 0.0.2
-
 - Auto completion using [Auto Complete](https://github.com/EvidentlyCube/TW5-AutoComplete) plugin for TiddlyWiki.
-
-### 0.0.1
-
 - Added preview support for Tiddlers.
 - Improved syntax highlighting for macros and widgets.
