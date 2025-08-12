@@ -29,35 +29,60 @@ function initializeAPI() {
 }
 
 
+let reconnectAttempts = 0;
+const maxReconnectDelay = 30000;
 
 function connectWebSocket(tempFolder, reconnect = false) {
     console.log('Connecting to TiddlyWiki WebSocket...');
     const config = vscode.workspace.getConfiguration('tiddlywiki');
     let host = getTiddlyWikiHost();
-    // Remove protocol if present (http:// or https://)
     host = host.replace(/^https?:\/\//, '');
-    if (ws && ws.readyState !== WebSocket.CLOSED && reconnect) {
-        ws.close();
-        ws = null;
+
+    if (ws) {
+        if (ws.readyState !== WebSocket.CLOSED && reconnect) {
+            console.log('Closing existing WebSocket before reconnect');
+            ws.close(1000, 'Reconnecting');  // Normal closure code
+            ws = null;
+        } else if (ws.readyState === WebSocket.OPEN) {
+            // Already connected
+            return ws;
+        }
     }
-    if (ws && ws.readyState === WebSocket.OPEN) return ws;
+
     ws = new WebSocket(`ws://${host}/ws`);
+
     ws.onopen = () => {
         console.log('WebSocket connection established');
+        reconnectAttempts = 0;  // Reset on success
     };
+
     ws.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-        // console.log('WebSocket message received:', data);
-        if (data.type === 'edit-tiddler') {
-            // Open tiddler for editing in the editor
-            (async () => {
-                await openTiddlerForEditing(data, tempFolder);
-            })();
+        try {
+            const data = JSON.parse(event.data);
+            if (data.type === 'edit-tiddler') {
+                (async () => {
+                    try {
+                        await openTiddlerForEditing(data, tempFolder);
+                    } catch (e) {
+                        console.error('Error opening tiddler:', e);
+                    }
+                })();
+            }
+        } catch (e) {
+            console.error('Error parsing WebSocket message:', e);
         }
     };
-    ws.onclose = () => {
-        console.log('WebSocket closed, attempting reconnect in 3s...');
-        setTimeout(() => connectWebSocket(tempFolder, true), 3000);
+
+    ws.onclose = (event) => {
+        console.log(`WebSocket closed (code: ${event.code}, reason: ${event.reason})`);
+        if (event.code !== 1000) {  // 1000 means normal closure; only reconnect if abnormal
+            reconnectAttempts++;
+            const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), maxReconnectDelay);
+            console.warn(`WebSocket disconnected. Reconnecting in ${delay / 1000}s...`);
+            setTimeout(() => connectWebSocket(tempFolder, true), delay);
+        } else {
+            console.log('WebSocket closed normally, will not reconnect.');
+        }
     };
 
     ws.onerror = (err) => {
