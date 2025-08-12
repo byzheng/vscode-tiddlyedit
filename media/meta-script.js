@@ -24,7 +24,8 @@ document.addEventListener('DOMContentLoaded', function() {
         noSelection.style.display = 'none';
         metaContent.style.display = 'block';
         metaContent.innerHTML = '';
-
+        const openTiddlerInTiddlyWiki = renderOpenInBrowserButton(tiddler);
+        metaContent.appendChild(openTiddlerInTiddlyWiki);
         // Title
         const titleSection = createSection('Basic Information');
         titleSection.appendChild(createField('Title', tiddler.title || 'Untitled'));
@@ -83,7 +84,52 @@ document.addEventListener('DOMContentLoaded', function() {
         //     metaContent.appendChild(textSection);
         // }
     }
+    function renderOpenInBrowserButton(tiddler) {
+        metaContent.innerHTML = '';
+        const buttonContainer = document.createElement('div');
+        buttonContainer.style.display = 'flex';
+        buttonContainer.style.alignItems = 'center';
+        buttonContainer.style.gap = '10px';
+        buttonContainer.style.marginBottom = '10px';
 
+        const openBtn = document.createElement('button');
+        openBtn.id = 'open-in-browser-btn';
+        openBtn.title = 'Open in TiddlyWiki';
+        openBtn.style.background = 'var(--vscode-button-background)';
+        openBtn.style.color = 'var(--vscode-button-foreground)';
+        openBtn.style.border = 'none';
+        openBtn.style.padding = '6px 12px';
+        openBtn.style.borderRadius = '3px';
+        openBtn.style.cursor = 'pointer';
+        openBtn.style.fontSize = '14px';
+        openBtn.textContent = '🌐 Open in TiddlyWiki';
+
+        buttonContainer.appendChild(openBtn);
+        //metaContent.appendChild(buttonContainer);
+
+        // Re-attach the event listener for the dynamically created button
+        openBtn.addEventListener("click", () => {
+            if (!tiddler.title) {
+                alert("No tiddler selected");
+                return;
+            }
+            const config = vscode.getState()?.wsConfig || { host: "localhost", port: 8080 };
+            console.log(`Connecting to WebSocket at ws://${config.host}:${config.port}/ws`);
+            const ws = new WebSocket(`ws://${config.host}:${config.port}/ws`);
+            ws.addEventListener("open", () => {
+                ws.send(JSON.stringify({
+                    type: "open-tiddler",
+                    title: tiddler.title
+                }));
+                ws.close();
+            });
+            ws.addEventListener("error", (err) => {
+                console.error("WebSocket error:", err);
+                alert("Failed to connect to TiddlyWiki WebSocket server");
+            });
+        });
+        return buttonContainer;
+    }
     function clearMeta() {
         noSelection.style.display = 'block';
         metaContent.style.display = 'none';
