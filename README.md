@@ -26,7 +26,9 @@
 ## Usage
 
 1. **Open sidebar panel** using the TiddlyWiki Icon in the left sidebar.
-2. The latest 10 tiddlers are listed or you can use the search bar to find a specific tiddler.
+2. **Search Tiddlers** using the search bar at the top of the sidebar. You can enter a search term to filter tiddlers. If no search term is provided, it will show the results of default filter.
+   - The default filter is `[all[tiddlers]!is[system]!is[shadow]!sort[modified]limit[10]]`, which can be configured in your VS Code settings.
+   - You can also use a custom filter by entering it in the search bar. The filter is used if search term starts with `[`.
 3. Open a tiddler to edit. The tiddler is saved into temporary folder with filename `title.tid` and content as tiddler text field.
 4. Save your changes to update the tiddler in your TiddlyWiki instance through WebAPI.
 5. Your browser will automatically refresh to show the updated tiddler. The sync interval is determined by the TiddlyWiki hidden configuration [Sync Polling Interval](https://tiddlywiki.com/#Hidden%20Setting%3A%20Sync%20Polling%20Interval).
