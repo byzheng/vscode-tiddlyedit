@@ -36,6 +36,10 @@ document.addEventListener('DOMContentLoaded', function() {
     // Search functionality with debouncing
     let searchTimeout;
     searchInput.addEventListener('input', function() {
+        if (searchInput.value.length < 2) {
+            tiddlerList.innerHTML = '';
+            return;
+        }
         clearTimeout(searchTimeout);
         searchTimeout = setTimeout(() => {
             const searchText = searchInput.value;
@@ -59,6 +63,9 @@ document.addEventListener('DOMContentLoaded', function() {
         
         switch (message.command) {
             case 'updateList':
+                if (typeof message.searchTerm === 'string' && message.searchTerm.trim() !== '') {
+                    searchInput.value = message.searchTerm;
+                }
                 updateTiddlerList(message.items);
                 break;
         }

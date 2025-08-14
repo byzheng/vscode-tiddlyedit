@@ -175,13 +175,24 @@ async function loadTiddlersIntoWebview() {
     if (!tiddlersWebview) return;
 
     try {
+        const _defaultFilter = '[all[tiddlers]!is[system]!is[shadow]!sort[modified]limit[10]]';
         const config = vscode.workspace.getConfiguration('tiddlywiki');
         const defaultFilter = config.get('defaultfilter');
+
+        if (!defaultFilter || typeof defaultFilter !== 'string') {
+            vscode.window.showErrorMessage('Invalid default filter configuration');
+            return;
+        }
+        if (defaultFilter.trim() === "") {
+            defaultFilter = _defaultFilter;
+        }
+        console.log('Loading tiddlers with filter:', defaultFilter);
         const results = await tiddlywikiAPI.searchTiddlers(defaultFilter);
         if (results && results.success) {
             tiddlersWebview.postMessage({
                 command: 'updateList',
-                items: results.data || []
+                items: results.data || [],
+                searchTerm: defaultFilter
             });
         }
     } catch (error) {
@@ -193,13 +204,10 @@ async function searchTiddlers(searchText) {
     if (!tiddlersWebview) return;
 
     try {
-        let results;
         if (!searchText || searchText.trim() === '') {
-            results = await tiddlywikiAPI.getLatestTiddlers();
-        } else {
-            results = await tiddlywikiAPI.searchTiddlers(searchText);
+            return;
         }
-
+        const results = await tiddlywikiAPI.searchTiddlers(searchText);
         if (results && results.success) {
             tiddlersWebview.postMessage({
                 command: 'updateList',
@@ -257,18 +265,18 @@ async function openTiddlerForEditing(tiddler, tempFolder) {
     }
 }
 
-async function refreshWebviewTiddlers(webview) {
-    try {
-        const latest = await tiddlywikiAPI.getLatestTiddlers();
-        if (latest && latest.success) {
-            webview.postMessage({ command: 'updateList', items: latest.data });
-        } else {
-            console.error('Could not fetch latest tiddlers');
-        }
-    } catch (error) {
-        console.error('Error refreshing webview:', error);
-    }
-}
+// async function refreshWebviewTiddlers(webview) {
+//     try {
+//         const latest = await tiddlywikiAPI.getLatestTiddlers();
+//         if (latest && latest.success) {
+//             webview.postMessage({ command: 'updateList', items: latest.data });
+//         } else {
+//             console.error('Could not fetch latest tiddlers');
+//         }
+//     } catch (error) {
+//         console.error('Error refreshing webview:', error);
+//     }
+// }
 
 
 function activate(context) {
@@ -338,7 +346,7 @@ function activate(context) {
 
                 // Refresh webview if it's open
                 if (currentWebview) {
-                    refreshWebviewTiddlers(currentWebview);
+                    loadTiddlersIntoWebview();
                 }
                 vscode.window.showInformationMessage('TiddlyWiki configuration updated!');
             }
