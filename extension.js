@@ -175,7 +175,9 @@ async function loadTiddlersIntoWebview() {
     if (!tiddlersWebview) return;
 
     try {
-        const results = await tiddlywikiAPI.getLatestTiddlers();
+        const config = vscode.workspace.getConfiguration('tiddlywiki');
+        const defaultFilter = config.get('defaultfilter');
+        const results = await tiddlywikiAPI.searchTiddlers(defaultFilter);
         if (results && results.success) {
             tiddlersWebview.postMessage({
                 command: 'updateList',

@@ -117,7 +117,10 @@ function TiddlywikiAPI(host, recipe = "default") {
         if (!searchTerm || typeof searchTerm !== "string" || searchTerm.trim() === "") {
             return Promise.reject(new Error("Invalid search term: Search term must be a non-empty string."));
         }
-        const filter = `[all[tiddlers]!is[system]search:title[${searchTerm}]limit[10]]`;
+        let filter = searchTerm;
+        if (!searchTerm.startsWith("[")) {
+            filter = `[all[tiddlers]!is[system]search:title[${searchTerm}]limit[10]]`;
+        }
         const path = `/recipes/${recipe}/tiddlers.json?filter=${encodeURIComponent(filter)}`;
         return request(path);
     }

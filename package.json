@@ -33,6 +33,11 @@
           "type": "string",
           "default": "default",
           "description": "Recipe name"
+        },
+        "tiddlywiki.defaultfilter": {
+          "type": "string",
+          "default": "[all[tiddlers]!is[system]!is[shadow]!sort[modified]limit[10]]",
+          "description": "Default filter for tiddlers"
         }
       }
     },
