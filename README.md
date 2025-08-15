@@ -51,7 +51,7 @@ You can configure these in your VS Code settings.
 
 ## Release Notes
 
-### 0.0.3
+### 0.1.0
 
 - Open a tiddler in browser and edit a tiddler in vs code from browser.
 - Improved meta information display for tiddlers.
