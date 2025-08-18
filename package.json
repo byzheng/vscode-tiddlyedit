@@ -85,7 +85,7 @@
       "editor/title": [
         {
           "command": "tiddlyedit.previewRmdInTiddlyWiki",
-          "when": "resourceExtname =~ /\\.(rmd|Rmd)$/",
+          "when": "tiddlyedit.isPreviewable && resourceExtname =~ /\\.(rmd|Rmd|tid|Tid)$/",
           "group": "navigation@99"
         }
       ]

@@ -280,54 +280,7 @@ async function openTiddlerForEditing(tiddler, tempFolder) {
 
 
 function activate(context) {
-    // Register Preview in TiddlyWiki for Rmd command
-    context.subscriptions.push(
-        vscode.commands.registerCommand('tiddlyedit.previewRmdInTiddlyWiki', async () => {
-            const editor = vscode.window.activeTextEditor;
-            if (!editor) return;
-            const doc = editor.document;
-            if (!/\.(rmd)$/i.test(doc.fileName)) {
-                vscode.window.showWarningMessage('Not an Rmd file.');
-                return;
-            }
-            // Read first 30 lines for header
-            const text = doc.getText(new vscode.Range(0, 0, 30, 0));
-            const headerMatch = /output:\s*\n\s*rtiddlywiki::tiddler_document:\s*\n\s*remote:\s*true/i.test(text);
-            if (!headerMatch) {
-                vscode.window.showWarningMessage('This Rmd file is not configured for remote TiddlyWiki preview.');
-                return;
-            }
-            let tiddlerTitleFromYaml = null;
-            try {
-                const yamlMatch = text.match(/^---\s*([\s\S]*?)\n---/);
-                if (yamlMatch) {
-                    const yamlBlock = yamlMatch[1];
-                    const titleMatch = yamlBlock.match(/^\s*title:\s*["']?(.+?)["']?\s*$/m);
-                    if (titleMatch) {
-                        tiddlerTitleFromYaml = titleMatch[1].trim().replace(/^["']|["']$/g, "");
-                    }
-                }
-            } catch (e) {
-                // ignore YAML parse errors, fallback to filename
-            }
-            if (!tiddlerTitleFromYaml || tiddlerTitleFromYaml === "" ||
-                tiddlerTitleFromYaml === "Untitled Document"
-            ) {
-                console.warn('No title found in YAML front matter.');
-                return;
-            }
-            const tiddlerTitle = tiddlerTitleFromYaml;
-            if (ws && ws.readyState === ws.OPEN) {
-                ws.send(JSON.stringify({
-                    type: "open-tiddler",
-                    title: tiddlerTitle
-                }));
-                vscode.window.setStatusBarMessage(`Previewing '${tiddlerTitle}' in TiddlyWiki.`, 3000);
-            } else {
-                vscode.window.setStatusBarMessage('WebSocket is not connected.', 3000);
-            }
-        })
-    );
+
     // Initialize the API
     initializeAPI();
     const tempFolder = path.join(os.tmpdir(), 'tiddlyedit-temp');
@@ -351,6 +304,24 @@ function activate(context) {
     })();
 
 
+
+
+    function hasRemoteTiddleDocument(doc) {
+        if (!doc) {
+            return false;
+        }
+        if (!/\.(rmd)$/i.test(doc.fileName)) {
+            return false;
+        }
+        console.log(doc.fileName);
+        const text = doc.getText(new vscode.Range(0, 0, 30, 0));
+        const headerMatch = /output:\s*\n\s*rtiddlywiki::tiddler_document:\s*\n\s*remote:\s*true/i.test(text);
+        if (!headerMatch) {
+            return false;
+        }
+        return true;
+    }
+
     function isInTempDir(filePath) {
         try {
             let realTempDir = fs.realpathSync(tempFolder);
@@ -365,7 +336,83 @@ function activate(context) {
             return false; // In case either path doesn't exist
         }
     }
+    // Register Preview in TiddlyWiki for Rmd command
+    context.subscriptions.push(
+        vscode.commands.registerCommand("tiddlyedit.updateContext", () => {
+            const editor = vscode.window.activeTextEditor;
+            if (!editor) return;
+            const doc = editor.document;
+            const hasRemote = hasRemoteTiddleDocument(doc);
+            const isTempTid = isInTempDir(doc.fileName);
+            const isPreviewable = hasRemote || isTempTid;
+            console.log(hasRemote);
+            vscode.commands.executeCommand("setContext", "tiddlyedit.isPreviewable", isPreviewable);
+        })
+    );
+    context.subscriptions.push(
+        vscode.window.onDidChangeActiveTextEditor(() => {
+            vscode.commands.executeCommand("tiddlyedit.updateContext");
+        })
+    );
+    vscode.commands.executeCommand("tiddlyedit.updateContext");
+    
+    context.subscriptions.push(
+        vscode.commands.registerCommand('tiddlyedit.previewRmdInTiddlyWiki', async () => {
+            const editor = vscode.window.activeTextEditor;
+            if (!editor) return;
+            const doc = editor.document;
 
+            const hasRemote = hasRemoteTiddleDocument(doc);
+            const isTempTid = isInTempDir(doc.fileName);
+            const isPreviewable = hasRemote || isTempTid;
+            if (!isPreviewable) {
+                vscode.window.showWarningMessage('This Rmd file is not previewable.');
+                return;
+            }
+
+            let tiddlerTitle;
+            if (hasRemote) {
+                // Read first 30 lines for header
+                const text = doc.getText(new vscode.Range(0, 0, 30, 0));
+
+                let tiddlerTitleFromYaml = null;
+                try {
+                    const yamlMatch = text.match(/^---\s*([\s\S]*?)\n---/);
+                    if (yamlMatch) {
+                        const yamlBlock = yamlMatch[1];
+                        const titleMatch = yamlBlock.match(/^\s*title:\s*["']?(.+?)["']?\s*$/m);
+                        if (titleMatch) {
+                            tiddlerTitleFromYaml = titleMatch[1].trim().replace(/^["']|["']$/g, "");
+                        }
+                    }
+                } catch (e) {
+                    vscode.window.setStatusBarMessage('Error parsing YAML front matter:' + e, 3000);
+                    return;
+                }
+                if (!tiddlerTitleFromYaml || tiddlerTitleFromYaml === "" ||
+                    tiddlerTitleFromYaml === "Untitled Document"
+                ) {
+                    vscode.window.setStatusBarMessage('No title found in YAML front matter.', 3000);
+                    return;
+                }
+                tiddlerTitle = tiddlerTitleFromYaml;
+            } else if (isTempTid) {
+                tiddlerTitle = path.basename(doc.fileName, '.tid');
+            }
+            if (!tiddlerTitle) {
+                vscode.window.showErrorMessage('Could not determine tiddler title from document.');
+            }
+            if (ws && ws.readyState === ws.OPEN) {
+                ws.send(JSON.stringify({
+                    type: "open-tiddler",
+                    title: tiddlerTitle
+                }));
+                vscode.window.setStatusBarMessage(`Previewing '${tiddlerTitle}' in TiddlyWiki.`, 3000);
+            } else {
+                vscode.window.setStatusBarMessage('WebSocket is not connected.', 3000);
+            }
+        })
+    );
 
     // Listen for configuration changes
     context.subscriptions.push(
