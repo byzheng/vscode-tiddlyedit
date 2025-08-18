@@ -280,6 +280,54 @@ async function openTiddlerForEditing(tiddler, tempFolder) {
 
 
 function activate(context) {
+    // Register Preview in TiddlyWiki for Rmd command
+    context.subscriptions.push(
+        vscode.commands.registerCommand('tiddlyedit.previewRmdInTiddlyWiki', async () => {
+            const editor = vscode.window.activeTextEditor;
+            if (!editor) return;
+            const doc = editor.document;
+            if (!/\.(rmd)$/i.test(doc.fileName)) {
+                vscode.window.showWarningMessage('Not an Rmd file.');
+                return;
+            }
+            // Read first 30 lines for header
+            const text = doc.getText(new vscode.Range(0, 0, 30, 0));
+            const headerMatch = /output:\s*\n\s*rtiddlywiki::tiddler_document:\s*\n\s*remote:\s*true/i.test(text);
+            if (!headerMatch) {
+                vscode.window.showWarningMessage('This Rmd file is not configured for remote TiddlyWiki preview.');
+                return;
+            }
+            let tiddlerTitleFromYaml = null;
+            try {
+                const yamlMatch = text.match(/^---\s*([\s\S]*?)\n---/);
+                if (yamlMatch) {
+                    const yamlBlock = yamlMatch[1];
+                    const titleMatch = yamlBlock.match(/^\s*title:\s*["']?(.+?)["']?\s*$/m);
+                    if (titleMatch) {
+                        tiddlerTitleFromYaml = titleMatch[1].trim().replace(/^["']|["']$/g, "");
+                    }
+                }
+            } catch (e) {
+                // ignore YAML parse errors, fallback to filename
+            }
+            if (!tiddlerTitleFromYaml || tiddlerTitleFromYaml === "" ||
+                tiddlerTitleFromYaml === "Untitled Document"
+            ) {
+                console.warn('No title found in YAML front matter.');
+                return;
+            }
+            const tiddlerTitle = tiddlerTitleFromYaml;
+            if (ws && ws.readyState === ws.OPEN) {
+                ws.send(JSON.stringify({
+                    type: "open-tiddler",
+                    title: tiddlerTitle
+                }));
+                vscode.window.setStatusBarMessage(`Previewing '${tiddlerTitle}' in TiddlyWiki.`, 3000);
+            } else {
+                vscode.window.setStatusBarMessage('WebSocket is not connected.', 3000);
+            }
+        })
+    );
     // Initialize the API
     initializeAPI();
     const tempFolder = path.join(os.tmpdir(), 'tiddlyedit-temp');

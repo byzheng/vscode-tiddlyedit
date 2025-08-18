@@ -8,7 +8,7 @@
   "publisher": "byzheng",
   "license": "MIT",
   "description": "Seamlessly edit and manage TiddlyWiki tiddlers within VS Code using a REST API connection.",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "engines": {
     "vscode": "^1.102.0"
   },
@@ -68,6 +68,11 @@
       {
         "command": "tiddlyedit.insertAutocomplete",
         "title": "TiddlyWiki: Insert Autocomplete"
+      },
+      {
+        "command": "tiddlyedit.previewRmdInTiddlyWiki",
+        "title": "Preview in TiddlyWiki",
+        "icon": "media/Tiddlywiki.svg"
       }
     ],
     "menus": {
@@ -75,6 +80,13 @@
         {
           "command": "tiddlyedit.insertAutocomplete",
           "when": "editorTextFocus"
+        }
+      ],
+      "editor/title": [
+        {
+          "command": "tiddlyedit.previewRmdInTiddlyWiki",
+          "when": "resourceExtname =~ /\\.(rmd|Rmd)$/",
+          "group": "navigation@99"
         }
       ]
     },
