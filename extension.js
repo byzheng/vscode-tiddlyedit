@@ -355,7 +355,7 @@ function activate(context) {
         })
     );
     vscode.commands.executeCommand("tiddlyedit.updateContext");
-    
+
     context.subscriptions.push(
         vscode.commands.registerCommand('tiddlyedit.previewRmdInTiddlyWiki', async () => {
             const editor = vscode.window.activeTextEditor;
@@ -573,7 +573,7 @@ function activate(context) {
                 }));
             });
 
-            quickPick.onDidAccept(() => {
+            quickPick.onDidAccept(async () => {
                 const selection = quickPick.selectedItems[0];
                 if (selection) {
                     const editor = vscode.window.activeTextEditor;
@@ -583,9 +583,36 @@ function activate(context) {
                     let snippet;
 
                     if (currentTrigger && currentTrigger.template) {
-                        const caretIndex = currentTrigger.template.indexOf("$caret$");
+                        let transformedValue = selection.label;
+                        if (currentTrigger['transform-filter'] && 
+                                currentTrigger['transform-filter'] !== "") {
+                            if (currentTrigger['transform-filter'].includes('get[text]')) {
+                                // Try to extract the tiddler title from the filter
+                                try {
+                                    const result = await tiddlywikiAPI.getTiddlerByTitle(selection.label);
+                                    if (result && result.success && result.data && typeof result.data.text === "string") {
+                                        transformedValue = result.data.text;
+                                    }
+                                } catch (e) {
+                                    vscode.window.setStatusBarMessage('Failed to get tiddler text: ' + e.message, 3000);
+                                }
+                            } else {
+                                // Replace <currentTiddler> with selection.label
+                                const filter = currentTrigger['transform-filter'].replace(/<currentTiddler>/g, "[" + selection.label + "]");
+                                // Query TiddlyWiki for the transformed value
+                                
+                                try {
+                                    const result = await tiddlywikiAPI.getTiddlersByFilter(filter);
+                                    if (result && result.success && Array.isArray(result.data) && result.data.length > 0) {
+                                        transformedValue = result.data[0];
+                                    }
+                                } catch (e) {
+                                    vscode.window.setStatusBarMessage('Failed to apply transform-filter: ' + e.message, 3000);
+                                }
+                            }
+                        }
                         snippet = currentTrigger.template
-                            .replace("$option$", selection.label)
+                            .replace("$option$", transformedValue)
                             .replace("$caret$", "$0");
                     } else {
                         snippet = `[[${selection.label}]] `;
