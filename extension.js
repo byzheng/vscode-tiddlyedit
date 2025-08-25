@@ -259,7 +259,8 @@ async function openTiddlerForEditing(tiddler, tempFolder) {
         const doc = await vscode.workspace.openTextDocument(tmpFilePath);
         await vscode.languages.setTextDocumentLanguage(doc, language);
         await vscode.window.showTextDocument(doc);
-
+        //selectedTiddler = message.tiddler;
+        await updateMetaPanel(tiddler);
     } catch (error) {
         vscode.window.showErrorMessage(`Error opening tiddler: ${error.message}`);
     }
@@ -470,8 +471,8 @@ function activate(context) {
                         await loadTiddlersIntoWebview();
                     } else if (message.command === 'selectTiddler') {
                         // Update selected tiddler and notify meta panel
-                        selectedTiddler = message.tiddler;
-                        await updateMetaPanel(message.tiddler);
+                        //selectedTiddler = message.tiddler;
+                        //await updateMetaPanel(message.tiddler);
                     } else if (message.command === 'openTiddler') {
                         await openTiddlerForEditing(message.tiddler, tempFolder);
                     }
