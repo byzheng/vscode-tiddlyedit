@@ -10,6 +10,8 @@ let tiddlersWebview = null;
 let metaWebview = null;
 let selectedTiddler = null;
 let ws = null;
+const tempFiles = new Set();
+
 
 function getTiddlyWikiHost() {
     // Use environment variable in debug mode, otherwise use user config
@@ -259,6 +261,7 @@ async function openTiddlerForEditing(tiddler, tempFolder) {
         const doc = await vscode.workspace.openTextDocument(tmpFilePath);
         await vscode.languages.setTextDocumentLanguage(doc, language);
         await vscode.window.showTextDocument(doc);
+        tempFiles.add(tmpFilePath);
         //selectedTiddler = message.tiddler;
         await updateMetaPanel(tiddler);
     } catch (error) {
@@ -314,7 +317,6 @@ function activate(context) {
         if (!/\.(rmd)$/i.test(doc.fileName)) {
             return false;
         }
-        console.log(doc.fileName);
         const text = doc.getText(new vscode.Range(0, 0, 30, 0));
         const headerMatch = /output:\s*\n\s*rtiddlywiki::tiddler_document:\s*\n\s*remote:\s*true/i.test(text);
         if (!headerMatch) {
@@ -346,7 +348,6 @@ function activate(context) {
             const hasRemote = hasRemoteTiddleDocument(doc);
             const isTempTid = isInTempDir(doc.fileName);
             const isPreviewable = hasRemote || isTempTid;
-            console.log(hasRemote);
             vscode.commands.executeCommand("setContext", "tiddlyedit.isPreviewable", isPreviewable);
         })
     );
@@ -627,68 +628,94 @@ function activate(context) {
             quickPick.show();
         })
     );
+    context.subscriptions.push(
+        vscode.workspace.onDidSaveTextDocument(async (document) => {
+            if (!document || !document.fileName) return;
+            if (!isInTempDir(document.fileName)) return; //ignore if not in temp dir
+            if (!document.fileName.endsWith('.tid')) return;
 
-    vscode.workspace.onDidSaveTextDocument(async (document) => {
-        if (!document || !document.fileName) return;
-        if (!isInTempDir(document.fileName)) return; //ignore if not in temp dir
-        if (!document.fileName.endsWith('.tid')) return;
+            if (!tiddlywikiAPI) initializeAPI();
 
-        if (!tiddlywikiAPI) initializeAPI();
+            const title = path.basename(document.fileName, '.tid');
+            const newText = document.getText();
 
-        const title = path.basename(document.fileName, '.tid');
-        const newText = document.getText();
+            try {
+                // Get existing tiddler to preserve other fields
+                const existingResult = await tiddlywikiAPI.getTiddlerByTitle(title);
 
-        try {
-            // Get existing tiddler to preserve other fields
-            const existingResult = await tiddlywikiAPI.getTiddlerByTitle(title);
+                if (!existingResult || !existingResult.success) {
+                    vscode.window.showWarningMessage('Cannot find the original tiddler to save changes.');
+                    return;
+                }
 
-            if (!existingResult || !existingResult.success) {
-                vscode.window.showWarningMessage('Cannot find the original tiddler to save changes.');
-                return;
+                // Create updated tiddler with new text
+                // Format date as [UTC]YYYY0MM0DD0hh0mm0ss0XXX
+                function getTiddlyWikiModifiedDate() {
+                    const now = new Date();
+                    const pad = n => n.toString().padStart(2, '0');
+                    const year = now.getUTCFullYear();
+                    const month = pad(now.getUTCMonth() + 1);
+                    const day = pad(now.getUTCDate());
+                    const hour = pad(now.getUTCHours());
+                    const min = pad(now.getUTCMinutes());
+                    const sec = pad(now.getUTCSeconds());
+                    const ms = now.getUTCMilliseconds().toString().padStart(3, '0');
+                    return `${year}${month}${day}${hour}${min}${sec}${ms}`;
+                }
+
+                const updatedFields = {
+                    text: newText,
+                    modified: getTiddlyWikiModifiedDate()
+                };
+
+                // Save back to TiddlyWiki using PUT request
+                const saveResult = await tiddlywikiAPI.putTiddler(title, [], updatedFields);
+
+                if (saveResult && saveResult.success) {
+                    vscode.window.setStatusBarMessage(`✅ Tiddler "${title}" saved`, 3000); // shows for 3 seconds
+                } else {
+                    throw new Error(saveResult?.error?.message || 'Unknown save error');
+                }
+
+            } catch (err) {
+                console.error('Save error:', err);
+                vscode.window.showErrorMessage(`❌ Could not save "${title}": ${err.message}`);
             }
+        })
+    );
 
-            //const existingTiddler = existingResult.data;
-
-            // Create updated tiddler with new text
-            // Format date as [UTC]YYYY0MM0DD0hh0mm0ss0XXX
-            function getTiddlyWikiModifiedDate() {
-                const now = new Date();
-                const pad = n => n.toString().padStart(2, '0');
-                const year = now.getUTCFullYear();
-                const month = pad(now.getUTCMonth() + 1);
-                const day = pad(now.getUTCDate());
-                const hour = pad(now.getUTCHours());
-                const min = pad(now.getUTCMinutes());
-                const sec = pad(now.getUTCSeconds());
-                const ms = now.getUTCMilliseconds().toString().padStart(3, '0');
-                return `${year}${month}${day}${hour}${min}${sec}${ms}`;
+    context.subscriptions.push(
+        vscode.window.onDidChangeVisibleTextEditors((editors) => {
+            const openDocs = new Set(editors.map(e => e.document.fileName));
+            for (const filePath of tempFiles) {
+                if (openDocs.has(filePath)) {
+                    continue;
+                }
+                fs.unlink(filePath, (err) => {
+                    if (err) console.error("Failed to delete temp file:", err);
+                    else console.log("Deleted temp file:", filePath);
+                });
+                tempFiles.delete(filePath);
             }
-
-            const updatedFields = {
-                text: newText,
-                modified: getTiddlyWikiModifiedDate()
-            };
-
-            // Save back to TiddlyWiki using PUT request
-            const saveResult = await tiddlywikiAPI.putTiddler(title, [], updatedFields);
-
-            if (saveResult && saveResult.success) {
-                vscode.window.setStatusBarMessage(`✅ Tiddler "${title}" saved`, 3000); // shows for 3 seconds
-            } else {
-                throw new Error(saveResult?.error?.message || 'Unknown save error');
-            }
-
-        } catch (err) {
-            console.error('Save error:', err);
-            vscode.window.showErrorMessage(`❌ Could not save "${title}": ${err.message}`);
-        }
-    });
-
+        })
+    );
 
 }
 
 
-function deactivate() { }
+function deactivate() {
+ // Cleanup all remaining temp files
+    for (const filePath of tempFiles) {
+        try {
+            fs.unlinkSync(filePath);
+        } catch (err) {
+            console.error("Failed to delete temp file on deactivate:", err);
+        }
+    }
+    tempFiles.clear();
+
+
+}
 
 module.exports = {
     activate,
