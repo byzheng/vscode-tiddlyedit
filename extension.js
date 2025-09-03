@@ -510,7 +510,7 @@ function activate(context) {
                                 if (saveResult && saveResult.success) {
                                     vscode.window.setStatusBarMessage(`Tags updated for '${title}'`, 2000);
                                     // Refresh meta panel
-                                    await updateMetaPanel(tiddler);
+                                    // await updateMetaPanel(tiddler);
                                     // Update the tiddler list
                                     await loadTiddlersIntoWebview();
                                 } else {

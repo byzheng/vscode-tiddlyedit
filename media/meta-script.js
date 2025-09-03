@@ -45,37 +45,21 @@ document.addEventListener('DOMContentLoaded', function () {
         });
         metaContent.appendChild(titleSection);
 
-        // Editable Tags
+        // Editable Tags (refactored, input separate)
         const tagsSection = createSection('Tags');
-        const tags = parseStringArray(tiddler.tags || []);
+        tagsSection.id = 'tags-section';
+        metaContent.appendChild(tagsSection);
+        // Tags container
         const tagsContainer = document.createElement('div');
         tagsContainer.className = 'tags-container';
+        tagsSection.appendChild(tagsContainer);
+        const tagsSpans = document.createElement('span');
+        tagsSpans.className = 'tags-spans';
+        tagsContainer.appendChild(tagsSpans);
 
-        // Render each tag with a remove button
-        tags.forEach((tag, idx) => {
-            const tagSpan = document.createElement('span');
-            tagSpan.className = 'tag';
-            tagSpan.textContent = tag;
-            // Remove button
-            const removeBtn = document.createElement('button');
-            removeBtn.textContent = '×';
-            removeBtn.className = 'remove-tag-btn';
-            removeBtn.title = 'Remove tag';
-            removeBtn.style.marginLeft = '4px';
-            removeBtn.style.background = 'none';
-            removeBtn.style.border = 'none';
-            removeBtn.style.color = 'var(--vscode-errorForeground)';
-            removeBtn.style.cursor = 'pointer';
-            removeBtn.onclick = () => {
-                tags.splice(idx, 1);
-                sendTagsUpdate(tags);
-                showTiddlerMeta(Object.assign({}, tiddler, { tags: tags }));
-            };
-            tagSpan.appendChild(removeBtn);
-            tagsContainer.appendChild(tagSpan);
-        });
-
-        // Add new tag input
+        // Render tags list
+        renderTagsSection(tiddler.tags || []);
+        // Render input box (only once)
         const addTagInput = document.createElement('input');
         addTagInput.type = 'text';
         addTagInput.id = 'add-tag-input';
@@ -89,28 +73,48 @@ document.addEventListener('DOMContentLoaded', function () {
                 e.preventDefault();
                 e.stopPropagation();
                 const newTag = addTagInput.value.trim();
-                if (!tags.includes(newTag)) {
-                    tags.push(newTag);
-                    sendTagsUpdate(tags);
-                    showTiddlerMeta(Object.assign({}, tiddler, { tags: tags }));
+                let tags = Array.from(tagsSpans.querySelectorAll('span.tw-tag'))
+                        .map(span => span.firstChild.textContent);
+                if (tags.includes(newTag)) {
+                    return;
                 }
-                addTagInput.value = '';
+                tags.push(newTag);
+                sendTagsUpdate(tags);
+                renderTagsSection(tags);
                 setTimeout(() => {
-                    const newInput = document.querySelector("#add-tag-input");
-                    if (newInput) {
-                        newInput.value = "";
-                        newInput.focus();
-                    }
+                    addTagInput.value = '';
+                    addTagInput.focus();
                 }, 100);
             }
         });
-        addTagInput.addEventListener("blur", () => console.log("blurred"));
-        addTagInput.addEventListener("focus", () => console.log("focused"));
-
         tagsContainer.appendChild(addTagInput);
 
-        tagsSection.appendChild(tagsContainer);
-        metaContent.appendChild(tagsSection);
+        function renderTagsSection(tags) {
+            tags = parseStringArray(tags || []);
+            tagsSpans.innerHTML = '';
+            tags.forEach((tag, idx) => {
+                const tagSpan = document.createElement('span');
+                tagSpan.className = 'tw-tag';
+                tagSpan.textContent = tag;
+                const removeBtn = document.createElement('button');
+                removeBtn.textContent = '×';
+                removeBtn.className = 'remove-tag-btn';
+                removeBtn.title = 'Remove tag';
+                removeBtn.style.marginLeft = '4px';
+                removeBtn.style.background = 'none';
+                removeBtn.style.border = 'none';
+                removeBtn.style.color = 'var(--vscode-errorForeground)';
+                removeBtn.style.cursor = 'pointer';
+                removeBtn.onclick = () => {
+                    let newTags = tags.slice();
+                    newTags.splice(idx, 1);
+                    sendTagsUpdate(newTags);
+                    renderTagsSection(newTags);
+                };
+                tagSpan.appendChild(removeBtn);
+                tagsSpans.appendChild(tagSpan);
+            });
+        }
 
         function sendTagsUpdate(updatedTags) {
             vscode.postMessage({
