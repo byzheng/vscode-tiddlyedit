@@ -90,17 +90,17 @@ document.addEventListener('DOMContentLoaded', function() {
             titleDiv.className = 'tiddler-title';
             titleDiv.textContent = tiddler.title || 'Untitled';
             
-            const tagsDiv = document.createElement('div');
-            tagsDiv.className = 'tiddler-tags';
-            if (tiddler.tags) {
-                const tags = parseStringArray(tiddler.tags);
-                tagsDiv.textContent = tags.join(', ');
-            }
+            // const tagsDiv = document.createElement('div');
+            // tagsDiv.className = 'tiddler-tags';
+            // if (tiddler.tags) {
+            //     const tags = parseStringArray(tiddler.tags);
+            //     tagsDiv.textContent = tags.join(', ');
+            // }
             
             li.appendChild(titleDiv);
-            if (tagsDiv.textContent) {
-                li.appendChild(tagsDiv);
-            }
+            // if (tagsDiv.textContent) {
+            //     li.appendChild(tagsDiv);
+            // }
             
             // Click handlers
             li.addEventListener('click', function() {

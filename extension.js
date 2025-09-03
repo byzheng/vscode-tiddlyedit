@@ -512,7 +512,7 @@ function activate(context) {
                                     // Refresh meta panel
                                     // await updateMetaPanel(tiddler);
                                     // Update the tiddler list
-                                    await loadTiddlersIntoWebview();
+                                    // await loadTiddlersIntoWebview();
                                 } else {
                                     vscode.window.showWarningMessage('Failed to update tags in TiddlyWiki.');
                                 }
