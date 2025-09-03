@@ -684,21 +684,21 @@ function activate(context) {
         })
     );
 
-    context.subscriptions.push(
-        vscode.window.onDidChangeVisibleTextEditors((editors) => {
-            const openDocs = new Set(editors.map(e => e.document.fileName));
-            for (const filePath of tempFiles) {
-                if (openDocs.has(filePath)) {
-                    continue;
-                }
-                fs.unlink(filePath, (err) => {
-                    if (err) console.error("Failed to delete temp file:", err);
-                    else console.log("Deleted temp file:", filePath);
-                });
-                tempFiles.delete(filePath);
-            }
-        })
-    );
+    // context.subscriptions.push(
+    //     vscode.window.onDidChangeVisibleTextEditors((editors) => {
+    //         const openDocs = new Set(editors.map(e => e.document.fileName));
+    //         for (const filePath of tempFiles) {
+    //             if (openDocs.has(filePath)) {
+    //                 continue;
+    //             }
+    //             fs.unlink(filePath, (err) => {
+    //                 if (err) console.error("Failed to delete temp file:", err);
+    //                 else console.log("Deleted temp file:", filePath);
+    //             });
+    //             tempFiles.delete(filePath);
+    //         }
+    //     })
+    // );
 
 }
 
