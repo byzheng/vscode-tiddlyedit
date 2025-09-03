@@ -2,14 +2,14 @@
 // Meta webview script
 const vscode = acquireVsCodeApi();
 
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     const noSelection = document.getElementById('no-selection');
     const metaContent = document.getElementById('meta-content');
 
     // Listen for messages from the extension
     window.addEventListener('message', event => {
         const message = event.data;
-        
+
         switch (message.command) {
             case 'showMeta':
                 showTiddlerMeta(message.tiddler);
@@ -78,13 +78,16 @@ document.addEventListener('DOMContentLoaded', function() {
         // Add new tag input
         const addTagInput = document.createElement('input');
         addTagInput.type = 'text';
+        addTagInput.id = 'add-tag-input';
         addTagInput.placeholder = 'Add tag...';
         addTagInput.className = 'add-tag-input';
         addTagInput.style.marginLeft = '8px';
         addTagInput.style.padding = '2px 6px';
         addTagInput.style.fontSize = '0.95em';
-        addTagInput.addEventListener('keydown', function(e) {
+        addTagInput.addEventListener('keydown', function (e) {
             if (e.key === 'Enter' && addTagInput.value.trim()) {
+                e.preventDefault();
+                e.stopPropagation();
                 const newTag = addTagInput.value.trim();
                 if (!tags.includes(newTag)) {
                     tags.push(newTag);
@@ -92,8 +95,18 @@ document.addEventListener('DOMContentLoaded', function() {
                     showTiddlerMeta(Object.assign({}, tiddler, { tags: tags }));
                 }
                 addTagInput.value = '';
+                setTimeout(() => {
+                    const newInput = document.querySelector("#add-tag-input");
+                    if (newInput) {
+                        newInput.value = "";
+                        newInput.focus();
+                    }
+                }, 100);
             }
         });
+        addTagInput.addEventListener("blur", () => console.log("blurred"));
+        addTagInput.addEventListener("focus", () => console.log("focused"));
+
         tagsContainer.appendChild(addTagInput);
 
         tagsSection.appendChild(tagsContainer);
@@ -107,7 +120,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
         // Custom Fields
-        const customFields = getCustomFields(tiddler.fields);
+        const customFields = getCustomFields(tiddler);
 
         if (customFields.length > 0) {
             const customSection = createSection('Custom Fields');
@@ -173,37 +186,37 @@ document.addEventListener('DOMContentLoaded', function() {
     function createSection(title) {
         const section = document.createElement('div');
         section.className = 'meta-section';
-        
+
         const sectionTitle = document.createElement('h3');
         sectionTitle.className = 'section-title';
         sectionTitle.textContent = title;
         section.appendChild(sectionTitle);
-        
+
         return section;
     }
 
     function createField(label, value) {
         const field = document.createElement('div');
         field.className = 'meta-field';
-        
+
         const labelSpan = document.createElement('span');
         labelSpan.className = 'field-label';
         labelSpan.textContent = label + ':';
-        
+
         const valueSpan = document.createElement('span');
         valueSpan.className = 'field-value';
         valueSpan.textContent = value || '';
-        
+
         field.appendChild(labelSpan);
         field.appendChild(valueSpan);
-        
+
         return field;
     }
 
     function getCustomFields(tiddler) {
         const standardFields = ['title', 'text', 'tags', 'type', 'created', 'modified', 'creator', 'modifier'];
         const customFields = [];
-        
+
         for (const [key, value] of Object.entries(tiddler)) {
             if (!standardFields.includes(key) && value !== undefined && value !== null) {
                 customFields.push({ key: key, value: String(value) });
