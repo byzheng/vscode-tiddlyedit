@@ -45,22 +45,66 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         metaContent.appendChild(titleSection);
 
-        // Tags
-        if (tiddler.tags && tiddler.tags.length > 0) {
-            const tagsSection = createSection('Tags');
-            const tags = parseStringArray(tiddler.tags);
-            const tagsContainer = document.createElement('div');
-            tagsContainer.className = 'tags-container';
-            
-            tags.forEach(tag => {
-                const tagSpan = document.createElement('span');
-                tagSpan.className = 'tag';
-                tagSpan.textContent = tag;
-                tagsContainer.appendChild(tagSpan);
+        // Editable Tags
+        const tagsSection = createSection('Tags');
+        const tags = parseStringArray(tiddler.tags || []);
+        const tagsContainer = document.createElement('div');
+        tagsContainer.className = 'tags-container';
+
+        // Render each tag with a remove button
+        tags.forEach((tag, idx) => {
+            const tagSpan = document.createElement('span');
+            tagSpan.className = 'tag';
+            tagSpan.textContent = tag;
+            // Remove button
+            const removeBtn = document.createElement('button');
+            removeBtn.textContent = '×';
+            removeBtn.className = 'remove-tag-btn';
+            removeBtn.title = 'Remove tag';
+            removeBtn.style.marginLeft = '4px';
+            removeBtn.style.background = 'none';
+            removeBtn.style.border = 'none';
+            removeBtn.style.color = 'var(--vscode-errorForeground)';
+            removeBtn.style.cursor = 'pointer';
+            removeBtn.onclick = () => {
+                tags.splice(idx, 1);
+                sendTagsUpdate(tags);
+                showTiddlerMeta(Object.assign({}, tiddler, { tags: tags }));
+            };
+            tagSpan.appendChild(removeBtn);
+            tagsContainer.appendChild(tagSpan);
+        });
+
+        // Add new tag input
+        const addTagInput = document.createElement('input');
+        addTagInput.type = 'text';
+        addTagInput.placeholder = 'Add tag...';
+        addTagInput.className = 'add-tag-input';
+        addTagInput.style.marginLeft = '8px';
+        addTagInput.style.padding = '2px 6px';
+        addTagInput.style.fontSize = '0.95em';
+        addTagInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && addTagInput.value.trim()) {
+                const newTag = addTagInput.value.trim();
+                if (!tags.includes(newTag)) {
+                    tags.push(newTag);
+                    sendTagsUpdate(tags);
+                    showTiddlerMeta(Object.assign({}, tiddler, { tags: tags }));
+                }
+                addTagInput.value = '';
+            }
+        });
+        tagsContainer.appendChild(addTagInput);
+
+        tagsSection.appendChild(tagsContainer);
+        metaContent.appendChild(tagsSection);
+
+        function sendTagsUpdate(updatedTags) {
+            vscode.postMessage({
+                command: 'updateTiddlerTags',
+                title: tiddler.title,
+                tags: updatedTags
             });
-            
-            tagsSection.appendChild(tagsContainer);
-            metaContent.appendChild(tagsSection);
         }
         // Custom Fields
         const customFields = getCustomFields(tiddler.fields);

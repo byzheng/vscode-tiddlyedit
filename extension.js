@@ -496,8 +496,30 @@ function activate(context) {
                 metaWebview.postMessage({ command: 'clearMeta' });
                 webviewView.webview.onDidReceiveMessage(async message => {
                     if (message.command === 'openTiddlerInTiddlywiki') {
-
                         sendOpenTiddlerToWebSocket(message.tiddler);
+                    } else if (message.command === 'updateTiddlerTags') {
+                        // Save updated tags to TiddlyWiki
+                        const { title, tags } = message;
+                        try {
+                            const result = await tiddlywikiAPI.getTiddlerByTitle(title);
+                            if (result && result.success) {
+                                const tiddler = result.data;
+                                tiddler.tags = tags;
+                                // Save back
+                                const saveResult = await tiddlywikiAPI.putTiddler(title, [], tiddler);
+                                if (saveResult && saveResult.success) {
+                                    vscode.window.setStatusBarMessage(`Tags updated for '${title}'`, 2000);
+                                    // Refresh meta panel
+                                    await updateMetaPanel(tiddler);
+                                    // Update the tiddler list
+                                    await loadTiddlersIntoWebview();
+                                } else {
+                                    vscode.window.showWarningMessage('Failed to update tags in TiddlyWiki.');
+                                }
+                            }
+                        } catch (e) {
+                            vscode.window.showErrorMessage('Error updating tags: ' + e.message);
+                        }
                     }
                 });
             }
