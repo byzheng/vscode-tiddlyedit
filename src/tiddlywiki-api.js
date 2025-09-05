@@ -231,7 +231,8 @@ function TiddlywikiAPI(host, recipe = "default") {
         searchTiddlers: searchTiddlers,
         getLatestTiddlers: getLatestTiddlers,
         getAutoCompleteConfigure: getAutoCompleteConfigure,
-        getAutoCompleteOptions: getAutoCompleteOptions
+        getAutoCompleteOptions: getAutoCompleteOptions,
+        getHost: () => this_host
     };
 }
 

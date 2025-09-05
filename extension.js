@@ -4,6 +4,7 @@ const { TiddlywikiEditor } = require('./src/tiddlywiki-editor.js');
 const { AutoComplete } = require('./src/autocomplete.js');
 const { TiddlersWebView } = require('./src/tiddlers-webview.js');
 const { MetaWebView } = require('./src/meta-webview.js');
+const { WSManager } = require('./src/ws-manager.js');
 const path = require('path');
 const os = require('os');
 const fs = require('fs');
@@ -13,12 +14,8 @@ let tiddlywikiAPI = null;
 let tiddlywikiEditor = TiddlywikiEditor();
 let tiddlersWebview = TiddlersWebView();
 let metaWebview = MetaWebView();
-let selectedTiddler = null;
-let ws = null;
-const tempFiles = new Set();
-
-let tiddlywikiTags = [];
-
+let wsManager = WSManager();
+let autoComplete = AutoComplete();
 
 function getTiddlyWikiHost() {
     // Use environment variable in debug mode, otherwise use user config
@@ -37,110 +34,14 @@ function initializeAPI() {
     return tiddlywikiAPI;
 }
 
-async function getTiddlyWikiTags() {
-    const result = await tiddlywikiAPI.getTiddlersByFilter("[all[tiddlers]is[tag]!is[system]!is[shadow]]");
-    if (result && result.success && Array.isArray(result.data)) {
-        tiddlywikiTags = result.data;
-        console.log(tiddlywikiTags);
-    }
-}
-
-let reconnectAttempts = 0;
-const maxReconnectDelay = 30000;
-const MAX_RECONNECT_ATTEMPTS = 10;
-
-function connectWebSocket(tempFolder, reconnect = false) {
-    if (reconnect && reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
-        console.warn("Max reconnect attempts reached. Stopping.");
-        return;
-    }
-    console.log('Connecting to TiddlyWiki WebSocket...');
-    const config = vscode.workspace.getConfiguration('tiddlywiki');
-    let host = getTiddlyWikiHost();
-    host = host.replace(/^https?:\/\//, '');
-
-    if (ws) {
-        if (ws.readyState !== WebSocket.CLOSED && reconnect) {
-            console.log('Closing existing WebSocket before reconnect');
-            ws.close(1000, 'Reconnecting');  // Normal closure code
-            ws = null;
-        } else if (ws.readyState === WebSocket.OPEN) {
-            // Already connected
-            return ws;
-        }
-    }
-
-    ws = new WebSocket(`ws://${host}/ws`);
-
-    ws.onopen = () => {
-        console.log('WebSocket connection established');
-        reconnectAttempts = 0;  // Reset on success
-    };
-
-    ws.onmessage = (event) => {
-        try {
-            const data = JSON.parse(event.data);
-            if (data.type === 'edit-tiddler') {
-                (async () => {
-                    try {
-                        await openTiddlerForEditing(data, tempFolder);
-                    } catch (e) {
-                        console.error('Error opening tiddler:', e);
-                    }
-                })();
-            }
-        } catch (e) {
-            console.error('Error parsing WebSocket message:', e);
-        }
-    };
-
-    ws.onclose = (event) => {
-        console.log(`WebSocket closed (code: ${event.code}, reason: ${event.reason})`);
-        if (event.code !== 1000) {  // 1000 means normal closure; only reconnect if abnormal
-            reconnectAttempts++;
-            const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), maxReconnectDelay);
-            console.warn(`WebSocket disconnected. Reconnecting in ${delay / 1000}s...`);
-            setTimeout(() => connectWebSocket(tempFolder, true), delay);
-        } else {
-            console.log('WebSocket closed normally, will not reconnect.');
-        }
-    };
-
-    ws.onerror = (err) => {
-        console.error('WebSocket error:', err);
-    };
-
-    return ws;
-}
-
-
-// Detect system wake using timer
-let lastTick = Date.now();
-setInterval(() => {
-    const now = Date.now();
-    if (now - lastTick > 10000) { // system was asleep/paused > 10s
-        console.log("System wake detected, checking WS connection...");
-        if (!ws || ws.readyState === WebSocket.CLOSED) {
-            connectWebSocket(tempFolder, true);
-        }
-    }
-    lastTick = now;
-}, 5000);
-
-
 function activate(context) {
 
     // Initialize the API
     initializeAPI();
-    const tempFolder = path.join(os.tmpdir(), 'tiddlyedit-temp');
-    // Create it once if it doesn’t exist
-    if (!fs.existsSync(tempFolder)) {
-        fs.mkdirSync(tempFolder);
-    }
+    tiddlywikiEditor.initEditor(TiddlersWebView, metaWebview);
+    const tempFolder = tiddlywikiEditor.getTempFolder();
 
-    connectWebSocket(tempFolder);
-
-    let autoComplete = AutoComplete();
+    wsManager.connect(getTiddlyWikiHost(), tiddlywikiEditor, tiddlywikiAPI);
 
     // Initialize autocomplete configuration
     (async () => {
@@ -216,10 +117,10 @@ function activate(context) {
         // Tiddlers webview provider
         vscode.window.registerWebviewViewProvider('tiddlywiki-tiddlers', {
             resolveWebviewView(webviewView) {
-                tiddlersWebview.initView(webviewView.webview, 
-                    context.extensionUri, 
+                tiddlersWebview.initView(webviewView.webview,
+                    context.extensionUri,
                     tiddlywikiAPI,
-                    tiddlywikiEditor, 
+                    tiddlywikiEditor,
                     metaWebview);
 
             }
@@ -230,23 +131,13 @@ function activate(context) {
         // Meta webview provider
         vscode.window.registerWebviewViewProvider('tiddlywiki-meta', {
             resolveWebviewView(webviewView) {
-                metaWebview.initView(webviewView.webview, 
-                    context.extensionUri, 
+                metaWebview.initView(webviewView.webview,
+                    context.extensionUri,
                     tiddlywikiAPI,
                     tiddlersWebview);
             }
         })
     );
-    function sendOpenTiddlerToWebSocket(tiddler) {
-        if (ws && ws.readyState === WebSocket.OPEN) {
-            ws.send(JSON.stringify({
-                type: "open-tiddler",
-                title: tiddler.title
-            }));
-        } else {
-            vscode.window.showWarningMessage('WebSocket is not connected.');
-        }
-    }
     // Auto complete 
     context.subscriptions.push(
         vscode.commands.registerCommand('tiddlyedit.insertAutocomplete', async () => {
@@ -259,31 +150,12 @@ function activate(context) {
             await tiddlywikiEditor.saveTiddler(document, tiddlywikiAPI);
         })
     );
-
-    // context.subscriptions.push(
-    //     vscode.window.onDidChangeVisibleTextEditors((editors) => {
-    //         const openDocs = new Set(editors.map(e => e.document.fileName));
-    //         for (const filePath of tempFiles) {
-    //             if (openDocs.has(filePath)) {
-    //                 continue;
-    //             }
-    //             fs.unlink(filePath, (err) => {
-    //                 if (err) console.error("Failed to delete temp file:", err);
-    //                 else console.log("Deleted temp file:", filePath);
-    //             });
-    //             tempFiles.delete(filePath);
-    //         }
-    //     })
-    // );
-
 }
 
 
 function deactivate() {
-    tiddlywikiEditor.clearTempFiles();
-    if (ws) {
-        ws.close(1000, 'Extension deactivated');
-    }
+    tiddlywikiEditor.clearTempFiles(); // Clear temp files on deactivate
+    wsManager.close(); // Close WebSocket connection on deactivate
 }
 
 module.exports = {

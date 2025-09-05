@@ -5,6 +5,8 @@ const path = require('path');
 const vscode = require('vscode');
 
 function TiddlywikiEditor() {
+    let _metaWebView = null;
+    let _tiddlersWebView = null;
     const _tempFiles = new Set();
     const _tempFolder = path.join(os.tmpdir(), 'tiddlyedit-temp');
     // Create it once if it doesn’t exist
@@ -54,6 +56,10 @@ function TiddlywikiEditor() {
         const ms = now.getUTCMilliseconds().toString().padStart(3, '0');
         return `${year}${month}${day}${hour}${min}${sec}${ms}`;
     }
+    function initEditor(TiddlersWebView, metaWebview)  {
+        _metaWebView = metaWebview;
+        _tiddlersWebView = TiddlersWebView;
+    }
     async function editTiddler(tiddler, tiddlywikiAPI) {
         try {
             const result = await tiddlywikiAPI.getTiddlerByTitle(tiddler.title);
@@ -79,6 +85,10 @@ function TiddlywikiEditor() {
             await vscode.languages.setTextDocumentLanguage(doc, language);
             await vscode.window.showTextDocument(doc);
             _tempFiles.add(tmpFilePath);
+            
+            if (_metaWebView) {
+                _metaWebView.showMeta(tiddler); // show meta data
+            }
 
         } catch (error) {
             vscode.window.showErrorMessage(`Error opening tiddler: ${error.message}`);
@@ -193,12 +203,14 @@ function TiddlywikiEditor() {
         }
     }
     return {
+        initEditor,
         hasRemoteTiddleDocument,
         isInTempDir,
         editTiddler,
         saveTiddler,
         clearTempFiles,
-        previewRmd
+        previewRmd,
+        getTempFolder() { return _tempFolder; }
     };
 }
 
