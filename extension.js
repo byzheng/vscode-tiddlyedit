@@ -12,6 +12,8 @@ let selectedTiddler = null;
 let ws = null;
 const tempFiles = new Set();
 
+let tiddlywikiTags = [];
+
 
 function getTiddlyWikiHost() {
     // Use environment variable in debug mode, otherwise use user config
@@ -30,6 +32,13 @@ function initializeAPI() {
     return tiddlywikiAPI;
 }
 
+async function getTiddlyWikiTags() {
+    const result = await tiddlywikiAPI.getTiddlersByFilter("[all[tiddlers]is[tag]!is[system]!is[shadow]]");
+    if (result && result.success && Array.isArray(result.data)) {
+        tiddlywikiTags = result.data;
+        console.log(tiddlywikiTags);
+    }
+}
 
 let reconnectAttempts = 0;
 const maxReconnectDelay = 30000;
@@ -188,7 +197,7 @@ async function loadTiddlersIntoWebview() {
         if (defaultFilter.trim() === "") {
             defaultFilter = _defaultFilter;
         }
-        console.log('Loading tiddlers with filter:', defaultFilter);
+        //console.log('Loading tiddlers with filter:', defaultFilter);
         const results = await tiddlywikiAPI.searchTiddlers(defaultFilter);
         if (results && results.success) {
             tiddlersWebview.postMessage({
@@ -197,6 +206,7 @@ async function loadTiddlersIntoWebview() {
                 searchTerm: defaultFilter
             });
         }
+        getTiddlyWikiTags();
     } catch (error) {
         console.error('Error loading tiddlers:', error);
     }
