@@ -11,12 +11,12 @@ function WSManager() {
     function init({tiddlywikiEditor, tiddlywikiAPI}) {
         _tiddlywikiEditor = tiddlywikiEditor;
         _tiddlywikiAPI = tiddlywikiAPI;
-        let cleanHost = _tiddlywikiEditor.getHost().replace(/^https?:\/\//, '');
+        let cleanHost = _tiddlywikiAPI.getHost().replace(/^https?:\/\//, '');
         _host = `ws://${cleanHost}/ws`;
     }
     function connect() {
         reconnectAttempts = 0;
-        _connect(host, tiddlywikiEditor, tiddlywikiAPI);
+        _connect();
     }
 
     function _connect() {
@@ -32,7 +32,7 @@ function WSManager() {
                 const data = JSON.parse(event.data);
                 console.log('Received WebSocket message:', data);
                 if (data.type === 'edit-tiddler' && data.title) {
-                    _tiddlywikiEditor.editTiddler(data, _tiddlywikiAPI);
+                    _tiddlywikiEditor.editTiddler(data);
                 }
             } catch (e) {
                 console.error('Error parsing WebSocket message:', e);
@@ -45,7 +45,7 @@ function WSManager() {
                 reconnectAttempts++;
                 const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), maxReconnectDelay);
                 console.warn(`WebSocket disconnected. Reconnecting in ${delay / 1000}s...`);
-                setTimeout(() => _connect(host), delay);
+                setTimeout(() => _connect(), delay);
             } else {
                 console.log('WebSocket closed normally, will not reconnect.');
             }
@@ -78,6 +78,7 @@ function WSManager() {
     }
 
     return {
+        init,
         connect,
         sendOpenTiddlerToWebSocket,
         close,

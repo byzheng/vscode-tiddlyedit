@@ -7,6 +7,7 @@ const vscode = require('vscode');
 function TiddlywikiEditor() {
     let _metaWebView = null;
     let _tiddlersWebView = null;
+    let _tiddlywikiAPI = null;
     const _tempFiles = new Set();
     const _tempFolder = path.join(os.tmpdir(), 'tiddlyedit-temp');
     // Create it once if it doesn’t exist
@@ -56,13 +57,14 @@ function TiddlywikiEditor() {
         const ms = now.getUTCMilliseconds().toString().padStart(3, '0');
         return `${year}${month}${day}${hour}${min}${sec}${ms}`;
     }
-    function initEditor(TiddlersWebView, metaWebview)  {
+    function initEditor({TiddlersWebView, metaWebview, tiddlywikiAPI})  {
         _metaWebView = metaWebview;
         _tiddlersWebView = TiddlersWebView;
+        _tiddlywikiAPI = tiddlywikiAPI;
     }
-    async function editTiddler(tiddler, tiddlywikiAPI) {
+    async function editTiddler(tiddler) {
         try {
-            const result = await tiddlywikiAPI.getTiddlerByTitle(tiddler.title);
+            const result = await _tiddlywikiAPI.getTiddlerByTitle(tiddler.title);
             if (!result || !result.success) {
                 vscode.window.showErrorMessage(`Could not fetch tiddler: ${tiddler.title}`);
                 return;
@@ -94,19 +96,19 @@ function TiddlywikiEditor() {
             vscode.window.showErrorMessage(`Error opening tiddler: ${error.message}`);
         }
     }
-    async function saveTiddler(document, tiddlywikiAPI) {
+    async function saveTiddler(document) {
         if (!document || !document.fileName) return; // ignore invalid
         if (!isInTempDir(document.fileName)) return; //ignore if not in temp dir
         if (!document.fileName.endsWith('.tid')) return; // ignore if not .tid file
 
-        if (!tiddlywikiAPI) return; // ignore if no API
+        if (!_tiddlywikiAPI) return; // ignore if no API
 
         const title = path.basename(document.fileName, '.tid');
         const newText = document.getText();
 
         try {
             // Get existing tiddler to preserve other fields
-            const existingResult = await tiddlywikiAPI.getTiddlerByTitle(title);
+            const existingResult = await _tiddlywikiAPI.getTiddlerByTitle(title);
 
             if (!existingResult || !existingResult.success) {
                 vscode.window.showWarningMessage('Cannot find the original tiddler to save changes.');
@@ -121,7 +123,7 @@ function TiddlywikiEditor() {
             };
 
             // Save back to TiddlyWiki using PUT request
-            const saveResult = await tiddlywikiAPI.putTiddler(title, [], updatedFields);
+            const saveResult = await _tiddlywikiAPI.putTiddler(title, [], updatedFields);
 
             if (saveResult && saveResult.success) {
                 vscode.window.setStatusBarMessage(`✅ Tiddler "${title}" saved`, 3000); // shows for 3 seconds

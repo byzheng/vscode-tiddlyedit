@@ -38,10 +38,17 @@ function activate(context) {
 
     // Initialize the API
     initializeAPI();
-    tiddlywikiEditor.initEditor(TiddlersWebView, metaWebview);
-    const tempFolder = tiddlywikiEditor.getTempFolder();
-
-    wsManager.connect(getTiddlyWikiHost(), tiddlywikiEditor, tiddlywikiAPI);
+    tiddlywikiEditor.initEditor({
+        TiddlersWebView:TiddlersWebView, 
+        metaWebview:metaWebview,
+        tiddlywikiAPI:tiddlywikiAPI
+    });
+    
+    wsManager.init({
+        tiddlywikiEditor: tiddlywikiEditor,
+        tiddlywikiAPI: tiddlywikiAPI
+    })
+    wsManager.connect();
 
     // Initialize autocomplete configuration
     (async () => {
@@ -117,11 +124,16 @@ function activate(context) {
         // Tiddlers webview provider
         vscode.window.registerWebviewViewProvider('tiddlywiki-tiddlers', {
             resolveWebviewView(webviewView) {
-                tiddlersWebview.initView(webviewView.webview,
-                    context.extensionUri,
-                    tiddlywikiAPI,
-                    tiddlywikiEditor,
-                    metaWebview);
+
+                tiddlersWebview.init({
+                    webview: webviewView.webview,
+                    extensionUri: context.extensionUri,
+                    tiddlywikiAPI: tiddlywikiAPI,
+                    tiddlywikiEditor: tiddlywikiEditor,
+                    metaWebviewRef: metaWebview
+                })
+
+                tiddlersWebview.createView();
 
             }
         })
@@ -147,7 +159,7 @@ function activate(context) {
     // Save tiddler on document save
     context.subscriptions.push(
         vscode.workspace.onDidSaveTextDocument(async (document) => {
-            await tiddlywikiEditor.saveTiddler(document, tiddlywikiAPI);
+            await tiddlywikiEditor.saveTiddler(document);
         })
     );
 }

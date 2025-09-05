@@ -1,28 +1,36 @@
 const vscode = require('vscode');
 
 function TiddlersWebView() {
-    let webviewInstance = null;
-    function initView(webview, extensionUri, tiddlywikiAPI, tiddlywikiEditor, metaWebviewRef) {
-        //const webview = webviewView.webview;
-        webviewInstance = webview;
-        webview.options = { enableScripts: true };
-        webview.html = getTiddlersWebviewContent(webview, extensionUri);
+    let _webview, _metaWebView, _tiddlywikiAPI, _tiddlywikiEditor;
+    let _extensionUri;
+    function init({
+        webview, extensionUri, tiddlywikiAPI, tiddlywikiEditor, metaWebviewRef
+    }) {
+        _webview = webview;
+        _extensionUri = extensionUri;
+        _tiddlywikiAPI = tiddlywikiAPI;
+        _tiddlywikiEditor = tiddlywikiEditor;
+        _metaWebView = metaWebviewRef;
+    }
+    function createView() {
+        _webview.options = { enableScripts: true };
+        _webview.html = getTiddlersWebviewContent(_webview, _extensionUri);
 
         // Load initial tiddlers when panel loads
-        loadTiddlersIntoWebview(tiddlywikiAPI);
+        loadTiddlersIntoWebview();
 
         // Receive messages from tiddlers webview
-        webview.onDidReceiveMessage(async message => {
+        _webview.onDidReceiveMessage(async message => {
             if (message.command === 'search') {
-                await searchTiddlers(tiddlywikiAPI, message.text);
+                await searchTiddlers(message.text);
             } else if (message.command === 'refresh') {
-                await loadTiddlersIntoWebview(tiddlywikiAPI);
+                await loadTiddlersIntoWebview();
             } else if (message.command === 'selectTiddler') {
                 // Optionally notify meta panel
-                if (metaWebviewRef) metaWebviewRef.showMeta(message.tiddler);
+                if (_metaWebView) _metaWebView.showMeta(message.tiddler);
             } else if (message.command === 'openTiddler') {
-                await tiddlywikiEditor.editTiddler(message.tiddler, tiddlywikiAPI);
-                if (metaWebviewRef) metaWebviewRef.showMeta(message.tiddler);
+                await _tiddlywikiEditor.editTiddler(message.tiddler);
+                if (_metaWebView) _metaWebView.showMeta(message.tiddler);
             }
         });
     }
@@ -57,7 +65,7 @@ function TiddlersWebView() {
         </html>`;
     }
 
-    async function loadTiddlersIntoWebview(tiddlywikiAPI) {
+    async function loadTiddlersIntoWebview() {
         try {
             const _defaultFilter = '[all[tiddlers]!is[system]!is[shadow]!sort[modified]limit[10]]';
             const config = vscode.workspace.getConfiguration('tiddlywiki');
@@ -69,9 +77,9 @@ function TiddlersWebView() {
             if (defaultFilter.trim() === "") {
                 defaultFilter = _defaultFilter;
             }
-            const results = await tiddlywikiAPI.searchTiddlers(defaultFilter);
+            const results = await _tiddlywikiAPI.searchTiddlers(defaultFilter);
             if (results && results.success) {
-                webviewInstance.postMessage({
+                _webview.postMessage({
                     command: 'updateList',
                     items: results.data || [],
                     searchTerm: defaultFilter
@@ -82,14 +90,14 @@ function TiddlersWebView() {
         }
     }
 
-    async function searchTiddlers(tiddlywikiAPI, searchText) {
+    async function searchTiddlers(searchText) {
         try {
             if (!searchText || searchText.trim() === '') {
                 return;
             }
-            const results = await tiddlywikiAPI.searchTiddlers(searchText);
+            const results = await _tiddlywikiAPI.searchTiddlers(searchText);
             if (results && results.success) {
-                webviewInstance.postMessage({
+                _webview.postMessage({
                     command: 'updateList',
                     items: results.data || []
                 });
@@ -99,8 +107,8 @@ function TiddlersWebView() {
         }
     }
     return {
-
-        initView,
+        init,
+        createView,
         loadTiddlersIntoWebview
     }
 }
