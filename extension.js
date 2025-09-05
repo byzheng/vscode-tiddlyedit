@@ -1,5 +1,6 @@
 const vscode = require('vscode');
 const { TiddlywikiAPI } = require('./tiddlywiki-api.js');
+const { AutoComplete } = require('./src/autocomplete.js');
 const path = require('path');
 const os = require('os');
 const fs = require('fs');
@@ -305,13 +306,12 @@ function activate(context) {
 
     connectWebSocket(tempFolder);
 
-    let autoCompleteConfigure;
-
+    let autoComplete = AutoComplete();
 
     // Initialize autocomplete configuration
     (async () => {
         try {
-            autoCompleteConfigure = await tiddlywikiAPI.getAutoCompleteConfigure();
+            await autoComplete.loadConfigure(tiddlywikiAPI);
         } catch (error) {
             console.error('Failed to load autocomplete configuration:', error);
         }
@@ -545,41 +545,6 @@ function activate(context) {
             vscode.window.showWarningMessage('WebSocket is not connected.');
         }
     }
-    function getAutoTrigger(value) {
-        if (!autoCompleteConfigure || !Array.isArray(autoCompleteConfigure)) {
-            return null;
-        }
-        for (const conf of autoCompleteConfigure) {
-            if (!conf || typeof conf.trigger !== 'string' || conf.trigger === '') {
-                continue;
-            }
-            if (!value.startsWith(conf.trigger)) {
-                continue; // not matching this trigger
-            }
-            return conf;
-        }
-        return null
-    }
-    async function getAutoCompleteOptions(value) {
-        if (typeof value !== "string" || value.length < 2) {
-            return [];
-        }
-        let options = [];
-        const autoTrigger = getAutoTrigger(value);
-        if (autoTrigger) {
-            // If we have a trigger, use it to get options
-            options = await tiddlywikiAPI.getAutoCompleteOptions(autoTrigger, value);
-        } else {
-            options = await tiddlywikiAPI.searchTiddlers(value);
-        }
-        if (!options || !options.success) {
-            return [];
-        }
-        return {
-            trigger: autoTrigger,
-            options: options.data
-        };
-    }
     // Auto complete 
     context.subscriptions.push(
         vscode.commands.registerCommand('tiddlyedit.insertAutocomplete', async () => {
@@ -594,7 +559,7 @@ function activate(context) {
                 if (value.length < 2) {
                     return [];
                 }
-                const optionsData = await getAutoCompleteOptions(value);
+                const optionsData = await autoComplete.getAutoCompleteOptions(tiddlywikiAPI, value);
 
                 if (!optionsData || !optionsData.options || optionsData.options.length === 0) {
                     quickPick.items = [];
