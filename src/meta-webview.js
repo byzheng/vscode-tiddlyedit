@@ -28,7 +28,7 @@ function MetaWebView() {
                             vscode.window.setStatusBarMessage(`Tags updated for '${title}'`, 2000);
                             // Optionally refresh tiddler list
                             if (tiddlersWebviewRef && tiddlersWebviewRef.loadTiddlersIntoWebview) {
-                                tiddlersWebviewRef.loadTiddlersIntoWebview();
+                                tiddlersWebviewRef.loadTiddlersIntoWebview(tiddlywikiAPI);
                             }
                         } else {
                             vscode.window.showWarningMessage('Failed to update tags in TiddlyWiki.');

@@ -1,20 +1,22 @@
 const vscode = require('vscode');
 
 function TiddlersWebView() {
+    let webviewInstance = null;
     function initView(webview, extensionUri, tiddlywikiAPI, tiddlywikiEditor, metaWebviewRef) {
         //const webview = webviewView.webview;
+        webviewInstance = webview;
         webview.options = { enableScripts: true };
         webview.html = getTiddlersWebviewContent(webview, extensionUri);
 
         // Load initial tiddlers when panel loads
-        loadTiddlersIntoWebview(webview, tiddlywikiAPI);
+        loadTiddlersIntoWebview(tiddlywikiAPI);
 
         // Receive messages from tiddlers webview
         webview.onDidReceiveMessage(async message => {
             if (message.command === 'search') {
-                await searchTiddlers(webview, tiddlywikiAPI, message.text);
+                await searchTiddlers(tiddlywikiAPI, message.text);
             } else if (message.command === 'refresh') {
-                await loadTiddlersIntoWebview(webview, tiddlywikiAPI);
+                await loadTiddlersIntoWebview(tiddlywikiAPI);
             } else if (message.command === 'selectTiddler') {
                 // Optionally notify meta panel
                 if (metaWebviewRef) metaWebviewRef.showMeta(message.tiddler);
@@ -55,7 +57,7 @@ function TiddlersWebView() {
         </html>`;
     }
 
-    async function loadTiddlersIntoWebview(webview, tiddlywikiAPI) {
+    async function loadTiddlersIntoWebview(tiddlywikiAPI) {
         try {
             const _defaultFilter = '[all[tiddlers]!is[system]!is[shadow]!sort[modified]limit[10]]';
             const config = vscode.workspace.getConfiguration('tiddlywiki');
@@ -69,7 +71,7 @@ function TiddlersWebView() {
             }
             const results = await tiddlywikiAPI.searchTiddlers(defaultFilter);
             if (results && results.success) {
-                webview.postMessage({
+                webviewInstance.postMessage({
                     command: 'updateList',
                     items: results.data || [],
                     searchTerm: defaultFilter
@@ -80,14 +82,14 @@ function TiddlersWebView() {
         }
     }
 
-    async function searchTiddlers(webview, tiddlywikiAPI, searchText) {
+    async function searchTiddlers(tiddlywikiAPI, searchText) {
         try {
             if (!searchText || searchText.trim() === '') {
                 return;
             }
             const results = await tiddlywikiAPI.searchTiddlers(searchText);
             if (results && results.success) {
-                webview.postMessage({
+                webviewInstance.postMessage({
                     command: 'updateList',
                     items: results.data || []
                 });

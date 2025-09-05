@@ -205,7 +205,7 @@ function activate(context) {
 
                 // Refresh webview if it's open
                 if (currentWebview) {
-                    tiddlersWebview.loadTiddlersIntoWebview();
+                    tiddlersWebview.loadTiddlersIntoWebview(tiddlywikiAPI);
                 }
                 vscode.window.showInformationMessage('TiddlyWiki configuration updated!');
             }
