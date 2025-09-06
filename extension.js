@@ -120,8 +120,8 @@ function activate(context) {
         })
     );
 
+    // Tiddlers list webview provider
     context.subscriptions.push(
-        // Tiddlers webview provider
         vscode.window.registerWebviewViewProvider('tiddlywiki-tiddlers', {
             resolveWebviewView(webviewView) {
 
@@ -138,9 +138,9 @@ function activate(context) {
             }
         })
     );
+    
+    // Meta webview provider
     context.subscriptions.push(
-
-        // Meta webview provider
         vscode.window.registerWebviewViewProvider('tiddlywiki-meta', {
             resolveWebviewView(webviewView) {
                 metaWebView.init({
