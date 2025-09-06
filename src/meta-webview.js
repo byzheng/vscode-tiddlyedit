@@ -2,33 +2,45 @@ const vscode = require('vscode');
 
 
 function MetaWebView() {
-    let webviewInstance = null;
-    let tiddlersWebviewRef = null;
-    function initView(webview, extensionUri, tiddlywikiAPI, tiddlersRef) {
-        webviewInstance = webview;
-        tiddlersWebviewRef = tiddlersRef;
-        webview.options = { enableScripts: true };
-        webview.html = getMetaWebviewContent(webview, extensionUri);
-        webview.postMessage({ command: 'clearMeta' });
+    let _webview, _extensionUri, _tiddlywikiAPI, _tiddlywikiEditor, _tiddlersWebview;
 
-        webview.onDidReceiveMessage(async message => {
+
+    function init({
+        webview, 
+        extensionUri,
+        tiddlywikiAPI,
+        tiddlersWebview, 
+        tiddlywikiEditor
+    }) {
+        _webview = webview;
+        _extensionUri = extensionUri;
+        _tiddlywikiAPI = tiddlywikiAPI;
+        _tiddlersWebview = tiddlersWebview;
+        _tiddlywikiEditor = tiddlywikiEditor;
+    }
+    function createView() {
+        _webview.options = { enableScripts: true };
+        _webview.html = getMetaWebviewContent(_webview, _extensionUri);
+        _webview.postMessage({ command: 'clearMeta' });
+
+        _webview.onDidReceiveMessage(async message => {
             if (message.command === 'openTiddlerInTiddlywiki') {
-                if (tiddlersWebviewRef && tiddlersWebviewRef.sendOpenTiddlerToWebSocket) {
-                    tiddlersWebviewRef.sendOpenTiddlerToWebSocket(message.tiddler);
+                if (_tiddlersWebview && _tiddlersWebview.sendOpenTiddlerToWebSocket) {
+                    _tiddlersWebview.sendOpenTiddlerToWebSocket(message.tiddler);
                 }
             } else if (message.command === 'updateTiddlerTags') {
                 const { title, tags } = message;
                 try {
-                    const result = await tiddlywikiAPI.getTiddlerByTitle(title);
+                    const result = await _tiddlywikiAPI.getTiddlerByTitle(title);
                     if (result && result.success) {
                         const tiddler = result.data;
                         tiddler.tags = tags;
-                        const saveResult = await tiddlywikiAPI.putTiddler(title, [], tiddler);
+                        const saveResult = await _tiddlywikiAPI.putTiddler(title, [], tiddler);
                         if (saveResult && saveResult.success) {
                             vscode.window.setStatusBarMessage(`Tags updated for '${title}'`, 2000);
                             // Optionally refresh tiddler list
-                            if (tiddlersWebviewRef && tiddlersWebviewRef.loadTiddlersIntoWebview) {
-                                tiddlersWebviewRef.loadTiddlersIntoWebview(tiddlywikiAPI);
+                            if (_tiddlersWebview && _tiddlersWebview.loadTiddlersIntoWebview) {
+                                _tiddlersWebview.loadTiddlersIntoWebview();
                             }
                         } else {
                             vscode.window.showWarningMessage('Failed to update tags in TiddlyWiki.');
@@ -71,16 +83,17 @@ function MetaWebView() {
     }
 
     function showMeta(tiddler) {
-        if (webviewInstance) {
-            webviewInstance.postMessage({
-                command: 'showMeta',
-                tiddler
-            });
-        }
+        if (!_webview) return;
+        if (!tiddler) return;
+        _webview.postMessage({
+            command: 'showMeta',
+            tiddler
+        });
     }
 
     return {
-        initView,
+        init,
+        createView,
         showMeta
     };
 }

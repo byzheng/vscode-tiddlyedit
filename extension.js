@@ -13,7 +13,7 @@ const fs = require('fs');
 let tiddlywikiAPI = null;
 let tiddlywikiEditor = TiddlywikiEditor();
 let tiddlersWebview = TiddlersWebView();
-let metaWebview = MetaWebView();
+let metaWebView = MetaWebView();
 let wsManager = WSManager();
 let autoComplete = AutoComplete();
 
@@ -40,7 +40,7 @@ function activate(context) {
     initializeAPI();
     tiddlywikiEditor.initEditor({
         TiddlersWebView:TiddlersWebView, 
-        metaWebview:metaWebview,
+        metaWebview:metaWebView,
         tiddlywikiAPI:tiddlywikiAPI
     });
     
@@ -130,7 +130,7 @@ function activate(context) {
                     extensionUri: context.extensionUri,
                     tiddlywikiAPI: tiddlywikiAPI,
                     tiddlywikiEditor: tiddlywikiEditor,
-                    metaWebviewRef: metaWebview
+                    metaWebView: metaWebView
                 })
 
                 tiddlersWebview.createView();
@@ -143,10 +143,15 @@ function activate(context) {
         // Meta webview provider
         vscode.window.registerWebviewViewProvider('tiddlywiki-meta', {
             resolveWebviewView(webviewView) {
-                metaWebview.initView(webviewView.webview,
-                    context.extensionUri,
-                    tiddlywikiAPI,
-                    tiddlersWebview);
+                metaWebView.init({
+                    webview: webviewView.webview,
+                    extensionUri: context.extensionUri,
+                    tiddlywikiAPI: tiddlywikiAPI,
+                    tiddlywikiEditor: tiddlywikiEditor,
+                    tiddlersWebview: tiddlersWebview
+                })
+
+                metaWebView.createView();
             }
         })
     );

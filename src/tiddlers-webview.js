@@ -4,13 +4,13 @@ function TiddlersWebView() {
     let _webview, _metaWebView, _tiddlywikiAPI, _tiddlywikiEditor;
     let _extensionUri;
     function init({
-        webview, extensionUri, tiddlywikiAPI, tiddlywikiEditor, metaWebviewRef
+        webview, extensionUri, tiddlywikiAPI, tiddlywikiEditor, metaWebView
     }) {
         _webview = webview;
         _extensionUri = extensionUri;
         _tiddlywikiAPI = tiddlywikiAPI;
         _tiddlywikiEditor = tiddlywikiEditor;
-        _metaWebView = metaWebviewRef;
+        _metaWebView = metaWebView;
     }
     function createView() {
         _webview.options = { enableScripts: true };
@@ -27,7 +27,7 @@ function TiddlersWebView() {
                 await loadTiddlersIntoWebview();
             } else if (message.command === 'selectTiddler') {
                 // Optionally notify meta panel
-                if (_metaWebView) _metaWebView.showMeta(message.tiddler);
+                //if (_metaWebView) _metaWebView.showMeta(message.tiddler);
             } else if (message.command === 'openTiddler') {
                 await _tiddlywikiEditor.editTiddler(message.tiddler);
                 if (_metaWebView) _metaWebView.showMeta(message.tiddler);
