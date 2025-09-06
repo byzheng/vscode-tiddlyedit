@@ -2,21 +2,27 @@ const vscode = require('vscode');
 
 
 function MetaWebView() {
-    let _webview, _extensionUri, _tiddlywikiAPI, _tiddlywikiEditor, _tiddlersWebview;
-
+    let _webview;
+    let _extensionUri;
+    let _tiddlywikiAPI;
+    let _tiddlywikiEditor;
+    let _tiddlersWebview;
+    let _wsManager;
 
     function init({
         webview, 
         extensionUri,
         tiddlywikiAPI,
         tiddlersWebview, 
-        tiddlywikiEditor
+        tiddlywikiEditor,
+        wsManager
     }) {
         _webview = webview;
         _extensionUri = extensionUri;
         _tiddlywikiAPI = tiddlywikiAPI;
         _tiddlersWebview = tiddlersWebview;
         _tiddlywikiEditor = tiddlywikiEditor;
+        _wsManager = wsManager;
     }
     function createView() {
         _webview.options = { enableScripts: true };
@@ -25,8 +31,8 @@ function MetaWebView() {
 
         _webview.onDidReceiveMessage(async message => {
             if (message.command === 'openTiddlerInTiddlywiki') {
-                if (_tiddlersWebview && _tiddlersWebview.sendOpenTiddlerToWebSocket) {
-                    _tiddlersWebview.sendOpenTiddlerToWebSocket(message.tiddler);
+                if (_wsManager && _wsManager.sendOpenTiddlerToWebSocket) {
+                    _wsManager.sendOpenTiddlerToWebSocket(message.tiddler);
                 }
             } else if (message.command === 'updateTiddlerTags') {
                 const { title, tags } = message;

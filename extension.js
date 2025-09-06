@@ -82,7 +82,7 @@ function activate(context) {
     // Register Preview in TiddlyWiki for Rmd command
     context.subscriptions.push(
         vscode.commands.registerCommand('tiddlyedit.previewRmdInTiddlyWiki', async () => {
-            await tiddlywikiEditor.previewRmd(ws);
+            await tiddlywikiEditor.previewRmd(wsManager);
         })
     );
 
@@ -148,7 +148,8 @@ function activate(context) {
                     extensionUri: context.extensionUri,
                     tiddlywikiAPI: tiddlywikiAPI,
                     tiddlywikiEditor: tiddlywikiEditor,
-                    tiddlersWebview: tiddlersWebview
+                    tiddlersWebview: tiddlersWebview,
+                    wsManager: wsManager
                 })
 
                 metaWebView.createView();

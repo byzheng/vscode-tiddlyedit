@@ -1,6 +1,6 @@
 // ws-manager.js
 const WebSocket = require('ws');
-
+const vscode = require('vscode');
 function WSManager() {
     let _tiddlywikiEditor, _tiddlywikiAPI;
     let _host = null;
@@ -57,15 +57,18 @@ function WSManager() {
     }
 
     function sendOpenTiddlerToWebSocket(tiddler) {
-        if (ws && ws.readyState === WebSocket.OPEN) {
+        if (ws && ws.readyState === ws.OPEN) {
             ws.send(JSON.stringify({
                 type: "open-tiddler",
                 title: tiddler.title
             }));
+            vscode.window.setStatusBarMessage(`Previewing '${tiddler.title}' in TiddlyWiki.`, 3000);
         } else {
-            console.warn('WebSocket is not connected.');
+            vscode.window.setStatusBarMessage('WebSocket is not connected.', 3000);
         }
     }
+
+    
 
     function close() {
         if (ws) {

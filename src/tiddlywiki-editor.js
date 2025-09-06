@@ -148,7 +148,11 @@ function TiddlywikiEditor() {
         _tempFiles.clear();
     }
     // preview Rmd file in TiddlyWiki
-    async function previewRmd(ws) {
+    async function previewRmd(wsManager) {
+        if (!wsManager) {
+            vscode.window.showWarningMessage('WebSocket manager is not initialized.');
+            return;
+        }
         const editor = vscode.window.activeTextEditor;
         if (!editor) return;
         const doc = editor.document;
@@ -194,15 +198,8 @@ function TiddlywikiEditor() {
             vscode.window.showErrorMessage('Could not determine tiddler title from document.');
             return;
         }
-        if (ws && ws.readyState === ws.OPEN) {
-            ws.send(JSON.stringify({
-                type: "open-tiddler",
-                title: tiddlerTitle
-            }));
-            vscode.window.setStatusBarMessage(`Previewing '${tiddlerTitle}' in TiddlyWiki.`, 3000);
-        } else {
-            vscode.window.setStatusBarMessage('WebSocket is not connected.', 3000);
-        }
+        
+        wsManager.sendOpenTiddlerToWebSocket({ title: tiddlerTitle });
     }
     return {
         initEditor,
