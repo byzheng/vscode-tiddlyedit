@@ -1,0 +1,36 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Build and Install",
+            "type": "shell",
+            "command": "sh",
+            "args": [
+                "-c",
+                "rm -f ${workspaceFolder}/*.vsix && npx vsce package"
+            ],
+            "windows": {
+                "command": "cmd",
+                "args": [
+                    "/c",
+                    "del /q \"${workspaceFolder}\\*.vsix\" && npx vsce package"
+                ]
+            },
+            "group": {
+                "kind": "build"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Install Extension",
+            "type": "shell",
+            "command": "code",
+            "args": [
+                "--install-extension",
+                "${workspaceFolder}/vscode-tiddlyedit-*.vsix"
+            ],
+            "dependsOn": "Package Extension",
+            "problemMatcher": []
+        }
+    ]
+}
