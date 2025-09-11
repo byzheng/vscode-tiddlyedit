@@ -123,9 +123,9 @@ function TiddlywikiAPI(host, recipe = "default", searchFilter = "[all[tiddlers]!
         }
         let filter = searchTerm;
         if (!searchTerm.startsWith("[")) {
-            filter = this_searchFilter.replace("<query>", `[${searchTerm}]`);   
-            console.log("Using search filter:", filter);
-            //filter = `[all[tiddlers]!is[system]search:title[${searchTerm}]limit[10]]`;
+            filter = this_searchFilter.replace(/<query>/g, `[${searchTerm}]`);  
+            // console.log("Using search filter:", filter);
+            //filter = `[all[tiddlers]!is[system]search:title[${searchTerm}]limit[1  0]]`;
         }
         const path = `/recipes/${recipe}/tiddlers.json?filter=${encodeURIComponent(filter)}`;
         return request(path);
