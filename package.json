@@ -8,7 +8,7 @@
   "publisher": "byzheng",
   "license": "MIT",
   "description": "Seamlessly edit and manage TiddlyWiki tiddlers within VS Code using a REST API connection.",
-  "version": "0.2.0",
+  "version": "0.2.3",
   "engines": {
     "vscode": "^1.102.0"
   },
@@ -38,6 +38,11 @@
           "type": "string",
           "default": "[all[tiddlers]!is[system]!is[shadow]!sort[modified]limit[10]]",
           "description": "Default filter for tiddlers"
+        },
+        "tiddlywiki.searchFilter": {
+          "type": "string",
+          "default": "[all[tiddlers]!is[system]search:title<query>limit[10]]",
+          "description": "Search filter for tiddlers"
         }
       }
     },
