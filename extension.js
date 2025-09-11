@@ -26,11 +26,21 @@ function getTiddlyWikiHost() {
     return config.get('host', 'http://127.0.0.1:8080');
 }
 
+
+function getSearchFilter() {
+    // Use environment variable in debug mode, otherwise use user config
+    if (process.env.TIDDLYWIKI_SEARCH_TEST) {
+        return process.env.TIDDLYWIKI_SEARCH_TEST;
+    }
+    const config = vscode.workspace.getConfiguration('tiddlywiki');
+    return config.get('searchFilter', '[all[tiddlers]!is[system]search:title<query>limit[10]]');
+}
+
 function initializeAPI() {
     const config = vscode.workspace.getConfiguration('tiddlywiki');
     const host = getTiddlyWikiHost();
     const recipe = config.get('recipe', 'default');
-    const searchFilter = config.get('searchFilter', '[all[tiddlers]!is[system]search:title<query>limit[10]]');
+    const searchFilter = getSearchFilter();
 
     tiddlywikiAPI = TiddlywikiAPI(host, recipe, searchFilter);
     return tiddlywikiAPI;
@@ -41,11 +51,11 @@ function activate(context) {
     // Initialize the API
     initializeAPI();
     tiddlywikiEditor.initEditor({
-        TiddlersWebView:TiddlersWebView, 
-        metaWebview:metaWebView,
-        tiddlywikiAPI:tiddlywikiAPI
+        TiddlersWebView: TiddlersWebView,
+        metaWebview: metaWebView,
+        tiddlywikiAPI: tiddlywikiAPI
     });
-    
+
     wsManager.init({
         tiddlywikiEditor: tiddlywikiEditor,
         tiddlywikiAPI: tiddlywikiAPI
@@ -140,7 +150,7 @@ function activate(context) {
             }
         })
     );
-    
+
     // Meta webview provider
     context.subscriptions.push(
         vscode.window.registerWebviewViewProvider('tiddlywiki-meta', {
@@ -168,6 +178,44 @@ function activate(context) {
     context.subscriptions.push(
         vscode.workspace.onDidSaveTextDocument(async (document) => {
             await tiddlywikiEditor.saveTiddler(document);
+        })
+    );
+
+    // Create link for [[Tiddler Title]] in .tid files
+    context.subscriptions.push(
+        vscode.languages.registerDocumentLinkProvider(
+            { pattern: '**/*.tid' },
+            {
+                provideDocumentLinks(doc) {
+                    const regex = /\[\[(.*?)\]\]/g;
+                    const links = [];
+                    const text = doc.getText();
+
+                    let match;
+                    while ((match = regex.exec(text)) !== null) {
+                        const title = match[1];
+                        const start = doc.positionAt(match.index);
+                        const end = doc.positionAt(match.index + match[0].length);
+                        const range = new vscode.Range(start, end);
+                        const uri = vscode.Uri.parse(
+                            `command:tiddly.openTiddler?${encodeURIComponent(JSON.stringify([title]))}`
+                        );
+                        const link = new vscode.DocumentLink(range, uri);
+                        link.tooltip = `Open tiddler: ${title}`;
+                        links.push(link);
+                    }
+
+                    return links;
+                }
+            }
+        )
+    );
+
+    // Register command to handle the click
+    context.subscriptions.push(
+        vscode.commands.registerCommand('tiddly.openTiddler', (tiddlerTitle) => {
+            console.log("Opening tiddler:", tiddlerTitle);
+            wsManager.sendOpenTiddlerToWebSocket({ title: tiddlerTitle });
         })
     );
 }
