@@ -2,9 +2,11 @@ const vscode = require('vscode');
 
 function AutoComplete() {
     let _autoCompleteConfigure = null;
+    let _tiddlywikiAPI = null;
     async function loadConfigure(tiddlywikiAPI) {
+        _tiddlywikiAPI = tiddlywikiAPI;
         try {
-            _autoCompleteConfigure = await tiddlywikiAPI.getAutoCompleteConfigure();
+            _autoCompleteConfigure = await _tiddlywikiAPI.getAutoCompleteConfigure();
         } catch (error) {
             console.error('Failed to load autocomplete configuration:', error);
         }
@@ -22,9 +24,49 @@ function AutoComplete() {
             }
             return conf;
         }
-        return null
+        return null;
     }
-    async function getAutoCompleteOptions(tiddlywikiAPI, value) {
+    async function getSnippet(trigger, label) {
+        let snippet;
+
+        if (trigger && trigger.template) {
+            let transformedValue = label;
+            if (trigger['transform-filter'] &&
+                trigger['transform-filter'] !== "") {
+                if (trigger['transform-filter'].includes('get[text]')) {
+                    // Try to extract the tiddler title from the filter
+                    try {
+                        const result = await tiddlywikiAPI.getTiddlerByTitle(label);
+                        if (result && result.success && result.data && typeof result.data.text === "string") {
+                            transformedValue = result.data.text;
+                        }
+                    } catch (e) {
+                        vscode.window.setStatusBarMessage('Failed to get tiddler text: ' + e.message, 3000);
+                    }
+                } else {
+                    // Replace <currentTiddler> with label
+                    const filter = trigger['transform-filter'].replace(/<currentTiddler>/g, "[" + label + "]");
+                    // Query TiddlyWiki for the transformed value
+
+                    try {
+                        const result = await tiddlywikiAPI.getTiddlersByFilter(filter);
+                        if (result && result.success && Array.isArray(result.data) && result.data.length > 0) {
+                            transformedValue = result.data[0];
+                        }
+                    } catch (e) {
+                        vscode.window.setStatusBarMessage('Failed to apply transform-filter: ' + e.message, 3000);
+                    }
+                }
+            }
+            snippet = trigger.template
+                .replace("$option$", transformedValue)
+                .replace("$caret$", "$0");
+        } else {
+            snippet = `[[${label}]] `;
+        }
+        return snippet;
+    }
+    async function getAutoCompleteOptions(value) {
         if (typeof value !== "string" || value.length < 2) {
             return [];
         }
@@ -32,9 +74,9 @@ function AutoComplete() {
         const autoTrigger = getAutoTrigger(value);
         if (autoTrigger) {
             // If we have a trigger, use it to get options
-            options = await tiddlywikiAPI.getAutoCompleteOptions(autoTrigger, value);
+            options = await _tiddlywikiAPI.getAutoCompleteOptions(autoTrigger, value);
         } else {
-            options = await tiddlywikiAPI.searchTiddlers(value);
+            options = await _tiddlywikiAPI.searchTiddlers(value);
         }
         if (!options || !options.success) {
             return [];
@@ -44,7 +86,7 @@ function AutoComplete() {
             options: options.data
         };
     }
-    async function showQuickPick(tiddlywikiAPI) {
+    async function showQuickPick() {
         const quickPick = vscode.window.createQuickPick();
         quickPick.placeholder = "Type at least 2 chars for suggestions...";
         quickPick.matchOnDescription = true; // better filtering
@@ -56,7 +98,7 @@ function AutoComplete() {
             if (value.length < 2) {
                 return [];
             }
-            const optionsData = await getAutoCompleteOptions(tiddlywikiAPI, value);
+            const optionsData = await getAutoCompleteOptions(value);
 
             if (!optionsData || !optionsData.options || optionsData.options.length === 0) {
                 quickPick.items = [];
@@ -76,43 +118,7 @@ function AutoComplete() {
                 if (!editor) {
                     return;
                 }
-                let snippet;
-
-                if (currentTrigger && currentTrigger.template) {
-                    let transformedValue = selection.label;
-                    if (currentTrigger['transform-filter'] &&
-                        currentTrigger['transform-filter'] !== "") {
-                        if (currentTrigger['transform-filter'].includes('get[text]')) {
-                            // Try to extract the tiddler title from the filter
-                            try {
-                                const result = await tiddlywikiAPI.getTiddlerByTitle(selection.label);
-                                if (result && result.success && result.data && typeof result.data.text === "string") {
-                                    transformedValue = result.data.text;
-                                }
-                            } catch (e) {
-                                vscode.window.setStatusBarMessage('Failed to get tiddler text: ' + e.message, 3000);
-                            }
-                        } else {
-                            // Replace <currentTiddler> with selection.label
-                            const filter = currentTrigger['transform-filter'].replace(/<currentTiddler>/g, "[" + selection.label + "]");
-                            // Query TiddlyWiki for the transformed value
-
-                            try {
-                                const result = await tiddlywikiAPI.getTiddlersByFilter(filter);
-                                if (result && result.success && Array.isArray(result.data) && result.data.length > 0) {
-                                    transformedValue = result.data[0];
-                                }
-                            } catch (e) {
-                                vscode.window.setStatusBarMessage('Failed to apply transform-filter: ' + e.message, 3000);
-                            }
-                        }
-                    }
-                    snippet = currentTrigger.template
-                        .replace("$option$", transformedValue)
-                        .replace("$caret$", "$0");
-                } else {
-                    snippet = `[[${selection.label}]] `;
-                }
+                const snippet = await getSnippet(currentTrigger, selection.label);
 
                 editor.insertSnippet(new vscode.SnippetString(snippet));
             }
@@ -124,7 +130,8 @@ function AutoComplete() {
     return {
         loadConfigure,
         getAutoCompleteOptions,
-        showQuickPick
+        showQuickPick,
+        getSnippet
     };
 }
 module.exports = {

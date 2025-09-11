@@ -61,7 +61,8 @@ function activate(context) {
         tiddlywikiAPI: tiddlywikiAPI
     })
     wsManager.connect();
-
+    const tempFolder = tiddlywikiEditor.getTempFolder();
+    const filePattern = `**/${tempFolder}/*.tid`;
     // Initialize autocomplete configuration
     (async () => {
         try {
@@ -171,7 +172,7 @@ function activate(context) {
     // Auto complete 
     context.subscriptions.push(
         vscode.commands.registerCommand('tiddlyedit.insertAutocomplete', async () => {
-            autoComplete.showQuickPick(tiddlywikiAPI);
+            autoComplete.showQuickPick();
         })
     );
     // Save tiddler on document save
@@ -184,7 +185,7 @@ function activate(context) {
     // Create link for [[Tiddler Title]] in .tid files
     context.subscriptions.push(
         vscode.languages.registerDocumentLinkProvider(
-            { pattern: '**/*.tid' },
+            { pattern: "**/*.tid" },
             {
                 provideDocumentLinks(doc) {
                     const regex = /\[\[(.*?)\]\]/g;
@@ -210,6 +211,100 @@ function activate(context) {
             }
         )
     );
+    context.subscriptions.push(
+        // vscode.languages.registerInlineCompletionItemProvider(
+        //     { pattern: "**/*.tid" }, // target .tid files
+        //     {
+        //         async provideInlineCompletionItems(document, position, context, token) {
+        //             const line = document.lineAt(position).text;
+        //             const prefix = line.substring(0, position.character);
+
+        //             // Detect /tw mode
+        //             const match = prefix.match(/\/tw\s+([^\n]*)$/);
+        //             if (!match) return;
+
+        //             const afterTw = match[1];
+        //             console.log("Completion prefix:", afterTw);
+        //             // Fetch your autocomplete options
+        //             const autoOptions = await autoComplete.getAutoCompleteOptions(afterTw);
+        //             if (!autoOptions?.options || !Array.isArray(autoOptions.options)) return;
+        //             // Map to inline completions
+        //             const items = await Promise.all(
+        //                 autoOptions.options.map(async opt => {
+        //                     const snippet = await autoComplete.getSnippet(autoOptions.trigger, opt.title);
+        //                     console.log("Generated snippet:", snippet);
+        //                     // const twIndex = prefix.lastIndexOf("/tw ");
+        //                     // const startPos = new vscode.Position(position.line, twIndex);
+        //                     // const endPos = position;
+        //                     // return new vscode.InlineCompletionItem(snippet, new vscode.Range(startPos, endPos));
+        //                     return new vscode.InlineCompletionItem(snippet);
+        //                 })
+        //             );
+
+        //             return items;
+        //         }
+        //     }
+        // )
+
+        vscode.languages.registerCompletionItemProvider(
+            { pattern: "**/*.tid" },
+            {
+                async provideCompletionItems(document, position) {
+                    const line = document.lineAt(position).text;
+                    const prefix = line.substring(0, position.character);
+
+                    // Step 1: detect /tw mode
+                    const match = prefix.match(/\/tw([^\n]*)$/);
+                    //const match = line.text.substring(0, position.character).match(/\/tw\s+([^\n]*)$/);
+
+                    if (!match) {
+                        return; // not in /tw context
+                    }
+
+                    const afterTw = match[1];
+                    console.log("Completion prefix:", afterTw);
+
+                    const autoOptions = await autoComplete.getAutoCompleteOptions(afterTw);
+                    console.log("Auto-complete options:", autoOptions);
+
+                    if (autoOptions?.options && Array.isArray(autoOptions.options)) {
+                        const items = await Promise.all(
+                            autoOptions.options.map(async opt => {
+                                const item = new vscode.CompletionItem(
+                                    opt.title,
+                                    vscode.CompletionItemKind.Text
+                                );
+
+                                item.detail = opt.title;
+                                item.documentation = opt.title;
+
+                                // Set insertText if provided
+                                const snippet = await autoComplete.getSnippet(
+                                    autoOptions.trigger,
+                                    opt.title
+                                );
+
+                                console.log("Generated snippet:", snippet);
+                                // const startPos = position.translate(0, -match[0].length);
+                                // const endPos = position;
+                                // console.log("StartPos:", startPos, "EndPos:", endPos);
+                                //item.range = new vscode.Range(startPos, endPos);
+                                item.insertText = snippet;
+
+                                return item;
+                            })
+                        );
+                        return items;
+                        // return {
+                        //     items, // your array of CompletionItems
+                        //     isIncomplete: true
+                        // };
+                    }
+                }
+            },
+            "/" // trigger character
+        )
+    );
 
     // Register command to handle the click
     context.subscriptions.push(
@@ -222,8 +317,8 @@ function activate(context) {
 
 
 function deactivate() {
-    tiddlywikiEditor.clearTempFiles(); // Clear temp files on deactivate
-    wsManager.close(); // Close WebSocket connection on deactivate
+    //tiddlywikiEditor.clearTempFiles(); // Clear temp files on deactivate
+    //wsManager.close(); // Close WebSocket connection on deactivate
 }
 
 module.exports = {
