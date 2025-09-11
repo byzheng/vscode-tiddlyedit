@@ -260,12 +260,8 @@ function activate(context) {
                     if (!match) {
                         return; // not in /tw context
                     }
-
                     const afterTw = match[1];
-                    console.log("Completion prefix:", afterTw);
-
                     const autoOptions = await autoComplete.getAutoCompleteOptions(afterTw);
-                    console.log("Auto-complete options:", autoOptions);
 
                     if (autoOptions?.options && Array.isArray(autoOptions.options)) {
                         const items = await Promise.all(
@@ -274,31 +270,18 @@ function activate(context) {
                                     opt.title,
                                     vscode.CompletionItemKind.Text
                                 );
-
-                                item.detail = opt.title;
-                                item.documentation = opt.title;
-
-                                // Set insertText if provided
                                 const snippet = await autoComplete.getSnippet(
                                     autoOptions.trigger,
                                     opt.title
                                 );
 
                                 console.log("Generated snippet:", snippet);
-                                // const startPos = position.translate(0, -match[0].length);
-                                // const endPos = position;
-                                // console.log("StartPos:", startPos, "EndPos:", endPos);
-                                //item.range = new vscode.Range(startPos, endPos);
                                 item.insertText = snippet;
-
+                                console.log("item:", item);
                                 return item;
                             })
                         );
                         return items;
-                        // return {
-                        //     items, // your array of CompletionItems
-                        //     isIncomplete: true
-                        // };
                     }
                 }
             },
