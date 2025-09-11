@@ -36,7 +36,7 @@ function AutoComplete() {
                 if (trigger['transform-filter'].includes('get[text]')) {
                     // Try to extract the tiddler title from the filter
                     try {
-                        const result = await tiddlywikiAPI.getTiddlerByTitle(label);
+                        const result = await _tiddlywikiAPI.getTiddlerByTitle(label);
                         if (result && result.success && result.data && typeof result.data.text === "string") {
                             transformedValue = result.data.text;
                         }
@@ -49,7 +49,7 @@ function AutoComplete() {
                     // Query TiddlyWiki for the transformed value
 
                     try {
-                        const result = await tiddlywikiAPI.getTiddlersByFilter(filter);
+                        const result = await _tiddlywikiAPI.getTiddlersByFilter(filter);
                         if (result && result.success && Array.isArray(result.data) && result.data.length > 0) {
                             transformedValue = result.data[0];
                         }
