@@ -211,83 +211,50 @@ function activate(context) {
             }
         )
     );
-    context.subscriptions.push(
-        // vscode.languages.registerInlineCompletionItemProvider(
-        //     { pattern: "**/*.tid" }, // target .tid files
-        //     {
-        //         async provideInlineCompletionItems(document, position, context, token) {
-        //             const line = document.lineAt(position).text;
-        //             const prefix = line.substring(0, position.character);
+    // context.subscriptions.push(
 
-        //             // Detect /tw mode
-        //             const match = prefix.match(/\/tw\s+([^\n]*)$/);
-        //             if (!match) return;
+    //     vscode.languages.registerCompletionItemProvider(
+    //         { pattern: "**/*.tid" },
+    //         {
+    //             async provideCompletionItems(document, position) {
+    //                 const line = document.lineAt(position).text;
+    //                 const prefix = line.substring(0, position.character);
 
-        //             const afterTw = match[1];
-        //             console.log("Completion prefix:", afterTw);
-        //             // Fetch your autocomplete options
-        //             const autoOptions = await autoComplete.getAutoCompleteOptions(afterTw);
-        //             if (!autoOptions?.options || !Array.isArray(autoOptions.options)) return;
-        //             // Map to inline completions
-        //             const items = await Promise.all(
-        //                 autoOptions.options.map(async opt => {
-        //                     const snippet = await autoComplete.getSnippet(autoOptions.trigger, opt.title);
-        //                     console.log("Generated snippet:", snippet);
-        //                     // const twIndex = prefix.lastIndexOf("/tw ");
-        //                     // const startPos = new vscode.Position(position.line, twIndex);
-        //                     // const endPos = position;
-        //                     // return new vscode.InlineCompletionItem(snippet, new vscode.Range(startPos, endPos));
-        //                     return new vscode.InlineCompletionItem(snippet);
-        //                 })
-        //             );
+    //                 // Step 1: detect /tw mode
+    //                 const match = prefix.match(/\/tw([^\n]*)$/);
+    //                 //const match = line.text.substring(0, position.character).match(/\/tw\s+([^\n]*)$/);
 
-        //             return items;
-        //         }
-        //     }
-        // )
+    //                 if (!match) {
+    //                     return; // not in /tw context
+    //                 }
+    //                 const afterTw = match[1];
+    //                 const autoOptions = await autoComplete.getAutoCompleteOptions(afterTw);
 
-        vscode.languages.registerCompletionItemProvider(
-            { pattern: "**/*.tid" },
-            {
-                async provideCompletionItems(document, position) {
-                    const line = document.lineAt(position).text;
-                    const prefix = line.substring(0, position.character);
+    //                 if (autoOptions?.options && Array.isArray(autoOptions.options)) {
+    //                     const items = await Promise.all(
+    //                         autoOptions.options.map(async opt => {
+    //                             const item = new vscode.CompletionItem(
+    //                                 opt.title,
+    //                                 vscode.CompletionItemKind.Text
+    //                             );
+    //                             const snippet = await autoComplete.getSnippet(
+    //                                 autoOptions.trigger,
+    //                                 opt.title
+    //                             );
 
-                    // Step 1: detect /tw mode
-                    const match = prefix.match(/\/tw([^\n]*)$/);
-                    //const match = line.text.substring(0, position.character).match(/\/tw\s+([^\n]*)$/);
-
-                    if (!match) {
-                        return; // not in /tw context
-                    }
-                    const afterTw = match[1];
-                    const autoOptions = await autoComplete.getAutoCompleteOptions(afterTw);
-
-                    if (autoOptions?.options && Array.isArray(autoOptions.options)) {
-                        const items = await Promise.all(
-                            autoOptions.options.map(async opt => {
-                                const item = new vscode.CompletionItem(
-                                    opt.title,
-                                    vscode.CompletionItemKind.Text
-                                );
-                                const snippet = await autoComplete.getSnippet(
-                                    autoOptions.trigger,
-                                    opt.title
-                                );
-
-                                console.log("Generated snippet:", snippet);
-                                item.insertText = snippet;
-                                console.log("item:", item);
-                                return item;
-                            })
-                        );
-                        return items;
-                    }
-                }
-            },
-            "/" // trigger character
-        )
-    );
+    //                             console.log("Generated snippet:", snippet);
+    //                             item.insertText = snippet;
+    //                             console.log("item:", item);
+    //                             return item;
+    //                         })
+    //                     );
+    //                     return items;
+    //                 }
+    //             }
+    //         },
+    //         "/" // trigger character
+    //     )
+    // );
 
     // Register command to handle the click
     context.subscriptions.push(
