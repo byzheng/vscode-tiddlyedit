@@ -30,7 +30,9 @@ function initializeAPI() {
     const config = vscode.workspace.getConfiguration('tiddlywiki');
     const host = getTiddlyWikiHost();
     const recipe = config.get('recipe', 'default');
-    tiddlywikiAPI = TiddlywikiAPI(host, recipe);
+    const searchFilter = config.get('searchFilter', '[all[tiddlers]!is[system]search:title<query>limit[10]]');
+
+    tiddlywikiAPI = TiddlywikiAPI(host, recipe, searchFilter);
     return tiddlywikiAPI;
 }
 

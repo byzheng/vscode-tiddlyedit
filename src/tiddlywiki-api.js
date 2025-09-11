@@ -36,8 +36,12 @@ function parseStringArray(value, allowDuplicate = false) {
     }
 }
 
-function TiddlywikiAPI(host, recipe = "default") {
+function TiddlywikiAPI(host, recipe = "default", searchFilter = "[all[tiddlers]!is[system]search:title<query>limit[10]]") {
     const this_host = host || "http://localhost:8080";
+    const this_searchFilter = searchFilter || "[all[tiddlers]!is[system]search:title<query>limit[10]]";
+    if (!this_searchFilter.includes("<query>")) {
+        throw new Error("searchFilter must contain <query>");
+    }
     // Perform a TiddlyWiki API request (supports GET and PUT)
 
     async function request(path, method = "GET", data = null) {
@@ -119,7 +123,9 @@ function TiddlywikiAPI(host, recipe = "default") {
         }
         let filter = searchTerm;
         if (!searchTerm.startsWith("[")) {
-            filter = `[all[tiddlers]!is[system]search:title[${searchTerm}]limit[10]]`;
+            filter = this_searchFilter.replace("<query>", `[${searchTerm}]`);   
+            console.log("Using search filter:", filter);
+            //filter = `[all[tiddlers]!is[system]search:title[${searchTerm}]limit[10]]`;
         }
         const path = `/recipes/${recipe}/tiddlers.json?filter=${encodeURIComponent(filter)}`;
         return request(path);
