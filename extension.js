@@ -192,17 +192,25 @@ function activate(context) {
                     const links = [];
                     const text = doc.getText();
 
+                    // Helper to extract tiddler name from TiddlyWiki link ([[tiddler]] or [[title|tiddler]])
+                    function extractTiddlerFromLink(linkText) {
+                        // Match [[tiddler]] or [[title|tiddler]]
+                        const match = linkText.match(/^\[\[(?:[^\]|]*\|)?([^\]]+)\]\]$/);
+                        return match ? match[1] : null;
+                    }
                     let match;
                     while ((match = regex.exec(text)) !== null) {
-                        const title = match[1];
+                        const linkText = match[0];
+                        const tiddler = extractTiddlerFromLink(linkText);
+                        if (!tiddler) continue;
                         const start = doc.positionAt(match.index);
                         const end = doc.positionAt(match.index + match[0].length);
                         const range = new vscode.Range(start, end);
                         const uri = vscode.Uri.parse(
-                            `command:tiddly.openTiddler?${encodeURIComponent(JSON.stringify([title]))}`
+                            `command:tiddly.openTiddler?${encodeURIComponent(JSON.stringify([tiddler]))}`
                         );
                         const link = new vscode.DocumentLink(range, uri);
-                        link.tooltip = `Open tiddler: ${title}`;
+                        link.tooltip = `Open tiddler: ${tiddler}`;
                         links.push(link);
                     }
 
