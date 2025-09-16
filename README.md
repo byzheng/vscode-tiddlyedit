@@ -52,6 +52,11 @@ You can configure these in your VS Code settings.
 
 ## Release Notes
 
+### 0.2.3
+
+- Add and delete tiddler tags.
+- Open tiddler links in VS Code. Ctrl+Click or Cmd+Click on a tiddler link.
+
 ### 0.1.0
 
 - Open a tiddler in browser and edit a tiddler in vs code from browser.
