@@ -89,7 +89,7 @@ function TiddlywikiEditor() {
             _tempFiles.add(tmpFilePath);
             
             if (_metaWebView) {
-                _metaWebView.showMeta(tiddler); // show meta data
+                _metaWebView.showMeta(tiddlerData); // show meta data
             }
 
         } catch (error) {
