@@ -2,34 +2,25 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "Build and Install",
+            "label": "Build, Package and Install Extension",
             "type": "shell",
             "command": "sh",
             "args": [
                 "-c",
-                "rm -f ${workspaceFolder}/*.vsix && npx vsce package"
+                "rm -f ${workspaceFolder}/*.vsix && npx vsce package && code --install-extension $(ls -t ${workspaceFolder}/*.vsix | head -n1)"
             ],
             "windows": {
-                "command": "cmd",
+                "command": "powershell",
                 "args": [
-                    "/c",
-                    "del /q \"${workspaceFolder}\\*.vsix\" && npx vsce package"
+                    "-NoProfile",
+                    "-Command",
+                    "Remove-Item -Force \"${workspaceFolder}\\*.vsix\"; npx vsce package; $latest = Get-ChildItem \"${workspaceFolder}\" -Filter *.vsix | Sort-Object LastWriteTime -Descending | Select-Object -First 1; code --install-extension $latest.FullName"
                 ]
             },
             "group": {
-                "kind": "build"
+                "kind": "build",
+                "isDefault": true
             },
-            "problemMatcher": []
-        },
-        {
-            "label": "Install Extension",
-            "type": "shell",
-            "command": "code",
-            "args": [
-                "--install-extension",
-                "${workspaceFolder}/vscode-tiddlyedit-*.vsix"
-            ],
-            "dependsOn": "Package Extension",
             "problemMatcher": []
         }
     ]
