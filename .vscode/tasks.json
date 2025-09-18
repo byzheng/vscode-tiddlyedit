@@ -21,7 +21,13 @@
                 "kind": "build",
                 "isDefault": true
             },
-            "problemMatcher": []
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared",
+                "close": true,
+                "revealProblems": "onProblem"
+            }
         }
     ]
 }
