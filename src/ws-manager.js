@@ -30,9 +30,11 @@ function WSManager() {
         ws.onmessage = (event) => {
             try {
                 const data = JSON.parse(event.data);
-                console.log('Received WebSocket message:', data);
+                //console.log('Received WebSocket message:', data);
                 if (data.type === 'edit-tiddler' && data.title) {
                     _tiddlywikiEditor.editTiddler(data);
+                } else if (data.type === 'modify-tiddler') {
+                    _tiddlywikiEditor.modifyTiddler(data);
                 }
             } catch (e) {
                 console.error('Error parsing WebSocket message:', e);

@@ -96,6 +96,61 @@ function TiddlywikiEditor() {
             vscode.window.showErrorMessage(`Error opening tiddler: ${error.message}`);
         }
     }
+
+    async function modifyTiddler(data) {
+        if (!data || typeof data !== 'object') {
+            console.log('Invalid data format for modifyTiddler');
+            return;
+        }
+        // Check if op is 'insert'
+        if (data.op !== 'insert') {
+            console.log('Unsupported operation:', data.op);
+            vscode.window.setStatusBarMessage(`Unsupported operation: ${data.op}`, 3000);
+            return;
+        }
+
+        // Check if content is provided
+        if (!data.content) {
+            console.log('No content provided for insert operation');
+            return;
+        }
+
+        // Get the currently active editor
+        const editor = vscode.window.activeTextEditor;
+        if (!editor) {
+            vscode.window.setStatusBarMessage('No active editor found', 3000);
+            return;
+        }
+
+        // Check if the active editor is a valid tiddler file in temp directory
+        const document = editor.document;
+        if (!isInTempDir(document.fileName)) {
+            vscode.window.setStatusBarMessage('Active editor is not a tiddler file. Please open a tiddler first.', 3000);
+            return;
+        }
+
+        // Check if it's a .tid file
+        if (!document.fileName.endsWith('.tid')) {
+            vscode.window.setStatusBarMessage('Active editor is not a .tid file.', 3000);
+            return;
+        }
+
+        try {
+            // Get current cursor position
+            const position = editor.selection.active;
+            
+            // Insert content at cursor position
+            await editor.edit(editBuilder => {
+                editBuilder.insert(position, data.content);
+            });
+
+            vscode.window.setStatusBarMessage(`Content inserted: "${data.content}"`, 3000);
+        } catch (error) {
+            console.error('Error inserting content:', error);
+            vscode.window.setStatusBarMessage(`Error inserting content: ${error.message}`, 3000);
+        }
+    }
+
     async function saveTiddler(document) {
         if (!document || !document.fileName) return; // ignore invalid
         if (!isInTempDir(document.fileName)) return; //ignore if not in temp dir
@@ -206,6 +261,7 @@ function TiddlywikiEditor() {
         hasRemoteTiddleDocument,
         isInTempDir,
         editTiddler,
+        modifyTiddler,
         saveTiddler,
         clearTempFiles,
         previewRmd,
