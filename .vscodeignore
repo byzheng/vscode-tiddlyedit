@@ -1,10 +1,41 @@
+# VS Code ignore file for packaging
+# Exclude node_modules and dev dependencies (MOST IMPORTANT!)
+node_modules/**
+
+# Exclude VS Code specific files
 .vscode/**
 .vscode-test/**
-test/**
-.gitignore
-.yarnrc
-vsc-extension-quickstart.md
-**/jsconfig.json
-**/*.map
-**/eslint.config.mjs
 **/.vscode-test.*
+
+# Exclude test files
+test/**
+
+# Exclude git and development files
+.gitignore
+.git/**
+.yarnrc
+
+# Exclude documentation
+vsc-extension-quickstart.md
+README.md
+CHANGELOG.md
+
+# Exclude config files not needed at runtime
+**/jsconfig.json
+**/eslint.config.mjs
+.eslintrc.json
+
+# Exclude build artifacts
+**/*.map
+*.vsix
+out/test/**
+
+# Exclude logs and temp files
+*.log
+.DS_Store
+Thumbs.db
+
+# Exclude any large media files not needed
+media/original/**
+*.psd
+*.ai
