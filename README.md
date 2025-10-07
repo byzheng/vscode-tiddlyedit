@@ -50,17 +50,9 @@ You can configure these in your VS Code settings.
 * [Auto Complete](https://github.com/EvidentlyCube/TW5-AutoComplete) plugin uses tag `$:/tags/EC/AutoComplete/Trigger` for triggers. Switched on the Hidden Setting `Sync System Tiddlers` by setting `$:/config/SyncSystemTiddlersFromServer` to `yes` to allow system tiddlers are returned by web API.
 
 
-## Release Notes
+## Latest Release
 
-### 0.2.3
+**Version 0.2.6** - October 7, 2025
+- Enable auto save when editing tiddler in Visual Studio Code (disabled by default)
 
-- Add and delete tiddler tags.
-- Open tiddler links in VS Code. Ctrl+Click or Cmd+Click on a tiddler link.
-
-### 0.1.0
-
-- Open a tiddler in browser and edit a tiddler in vs code from browser.
-- Improved meta information display for tiddlers.
-- Auto completion using [Auto Complete](https://github.com/EvidentlyCube/TW5-AutoComplete) plugin for TiddlyWiki.
-- Added preview support for Tiddlers.
-- Improved syntax highlighting for macros and widgets.
+For complete release history, see [CHANGELOG.md](CHANGELOG.md).
