@@ -72,6 +72,9 @@ function activate(context) {
         }
     })();
 
+    // Setup auto-save functionality
+    tiddlywikiEditor.setupAutoSave();
+
 
     // Register Preview in TiddlyWiki for Rmd command
     context.subscriptions.push(
@@ -128,6 +131,10 @@ function activate(context) {
                 if (currentWebview) {
                     tiddlersWebview.loadTiddlersIntoWebview(tiddlywikiAPI);
                 }
+                
+                // Restart auto-save with new settings
+                tiddlywikiEditor.setupAutoSave();
+                
                 vscode.window.showInformationMessage('TiddlyWiki configuration updated!');
             }
         })
@@ -275,6 +282,8 @@ function activate(context) {
 
 
 function deactivate() {
+    // Stop auto-save timer
+    tiddlywikiEditor.stopAutoSave();
     //tiddlywikiEditor.clearTempFiles(); // Clear temp files on deactivate
     //wsManager.close(); // Close WebSocket connection on deactivate
 }

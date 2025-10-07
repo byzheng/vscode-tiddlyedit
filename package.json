@@ -8,7 +8,7 @@
   "publisher": "byzheng",
   "license": "MIT",
   "description": "Seamlessly edit and manage TiddlyWiki tiddlers within VS Code using a REST API connection.",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "engines": {
     "vscode": "^1.102.0"
   },
@@ -43,6 +43,18 @@
           "type": "string",
           "default": "[all[tiddlers]!is[system]search:title<query>limit[10]]",
           "description": "Search filter for tiddlers"
+        },
+        "tiddlywiki.autoSaveInterval": {
+          "type": "number",
+          "default": 10,
+          "minimum": 1,
+          "maximum": 300,
+          "description": "Auto-save interval in seconds for tiddler files (1-300 seconds)"
+        },
+        "tiddlywiki.enableAutoSave": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable automatic saving of tiddler files"
         }
       }
     },

@@ -10,6 +10,13 @@ function TiddlywikiEditor() {
     let _tiddlywikiAPI = null;
     const _tempFiles = new Set();
     const _tempFolder = path.join(os.tmpdir(), 'tiddlyedit-temp');
+    let _autoSaveTimer = null;
+    
+    // Create it once if it doesn't exist
+    if (!fs.existsSync(_tempFolder)) {
+        fs.mkdirSync(_tempFolder);
+    }
+    
     // Create it once if it doesn’t exist
     if (!fs.existsSync(_tempFolder)) {
         fs.mkdirSync(_tempFolder);
@@ -256,6 +263,61 @@ function TiddlywikiEditor() {
         
         wsManager.sendOpenTiddlerToWebSocket({ title: tiddlerTitle });
     }
+
+    // Auto-save functionality
+    function setupAutoSave() {
+        const config = vscode.workspace.getConfiguration('tiddlywiki');
+        const enableAutoSave = config.get('enableAutoSave', true);
+        const autoSaveInterval = config.get('autoSaveInterval', 10);
+        // Clear existing timer
+        if (_autoSaveTimer) {
+            clearInterval(_autoSaveTimer);
+            _autoSaveTimer = null;
+        }
+
+        if (!enableAutoSave) {
+            console.log('Auto-save is disabled');
+            return;
+        }
+
+        console.log(`Setting up auto-save with ${autoSaveInterval} second interval`);
+        
+        _autoSaveTimer = setInterval(async () => {
+            await performAutoSave();
+        }, autoSaveInterval * 1000);
+    }
+
+    async function performAutoSave() {
+        // Get all open text editors
+        const editors = vscode.window.visibleTextEditors;
+        
+        for (const editor of editors) {
+            const document = editor.document;
+            
+            // Check if it's a tiddler file that needs saving
+            if (document.isDirty && 
+                document.fileName.endsWith('.tid') && 
+                isInTempDir(document.fileName)) {
+                
+                try {
+                    // Save the document
+                    await document.save();
+                    await saveTiddler(document);
+                    console.log(`Auto-saved: ${document.fileName}`);
+                } catch (error) {
+                    console.error(`Auto-save failed for ${document.fileName}:`, error);
+                }
+            }
+        }
+    }
+
+    function stopAutoSave() {
+        if (_autoSaveTimer) {
+            clearInterval(_autoSaveTimer);
+            _autoSaveTimer = null;
+        }
+    }
+
     return {
         initEditor,
         hasRemoteTiddleDocument,
@@ -265,6 +327,8 @@ function TiddlywikiEditor() {
         saveTiddler,
         clearTempFiles,
         previewRmd,
+        setupAutoSave,
+        stopAutoSave,
         getTempFolder() { return _tempFolder; }
     };
 }
