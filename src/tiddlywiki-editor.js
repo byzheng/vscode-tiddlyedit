@@ -78,6 +78,19 @@ function TiddlywikiEditor() {
             }
 
             const tiddlerData = result.data;
+            if(tiddlerData.title.startsWith('$:/')) {
+                tiddlerData.title = tiddlerData.title.replace('/', '⁄')
+                tiddlerData.title = tiddlerData.title.replace('$', '＄');
+                tiddlerData.title = tiddlerData.title.replace(':', '꞉');
+                tiddlerData.title = tiddlerData.title.replace('?', '？');
+                tiddlerData.title = tiddlerData.title.replace('*', '＊');
+                tiddlerData.title = tiddlerData.title.replace('"', '＂');
+                tiddlerData.title = tiddlerData.title.replace('<', '＜');
+                tiddlerData.title = tiddlerData.title.replace('>', '＞');
+                tiddlerData.title = tiddlerData.title.replace('|', '｜');
+                tiddlerData.title = tiddlerData.title.replace('\\', '＼');
+                tiddlerData.title = tiddlerData.title.replace('/', '⁄');
+            }
             const tmpFilePath = path.join(_tempFolder, `${tiddlerData.title}.tid`);
             fs.writeFileSync(tmpFilePath, tiddlerData.text || '', 'utf8');
 
@@ -165,7 +178,20 @@ function TiddlywikiEditor() {
 
         if (!_tiddlywikiAPI) return; // ignore if no API
 
-        const title = path.basename(document.fileName, '.tid');
+        let title = path.basename(document.fileName, '.tid');
+        if(title.startsWith('＄꞉⁄')) {
+            title =    title.replace('⁄', '/')
+            title =    title.replace('＄', '$');
+            title =    title.replace('꞉', ":");
+            title =    title.replace('？', "?");
+            title =    title.replace('＊', "*");
+            title =    title.replace('＂', '"');
+            title =    title.replace('＜', '<');
+            title =    title.replace('＞', '>');
+            title =    title.replace('｜', '|');
+            title =    title.replace('＼', '\\');
+            title =    title.replace('⁄', '/');
+        }
         const newText = document.getText();
 
         try {
