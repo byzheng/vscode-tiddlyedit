@@ -192,7 +192,7 @@ function activate(context) {
     // Create link for [[Tiddler Title]] in .tid files
     context.subscriptions.push(
         vscode.languages.registerDocumentLinkProvider(
-            { pattern: "**/*.{Tid,tid,R,r,Rmd,rmd}" },
+            { pattern: "**/*.{Tid,tid,R,r,Rmd,rmd,qmd,Qmd}" },
             {
                 provideDocumentLinks(doc) {
                     const regex = /\[\[(.*?)\]\]/g;
