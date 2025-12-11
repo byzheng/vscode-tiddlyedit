@@ -67,12 +67,15 @@ function TiddlywikiEditor() {
     }
     
     // Send tiddler update to browser with optional cursor offset
-    function sendTiddlerToWebSocket(title, editor) {
+    function sendTiddlerToWebSocket(title, editor, isSave = false) {
         if (!_wsManager) return;
         
         const config = vscode.workspace.getConfiguration('tiddlywiki');
         const sendCursorOffset = config.get('sendCursorOffset', false);
         
+        if (isSave && !sendCursorOffset) {
+            return;
+        }
         const payload = { title };
         
         if (sendCursorOffset && editor) {
@@ -80,7 +83,6 @@ function TiddlywikiEditor() {
             const offset = editor.document.offsetAt(position);
             payload.offset = offset;
         }
-        
         _wsManager.sendOpenTiddlerToWebSocket(payload);
     }
     function initEditor({TiddlersWebView, metaWebview, tiddlywikiAPI})  {
@@ -243,7 +245,7 @@ function TiddlywikiEditor() {
                 
                 // Send update to browser with cursor offset if enabled
                 const editor = vscode.window.visibleTextEditors.find(ed => ed.document === document);
-                sendTiddlerToWebSocket(title, editor);
+                sendTiddlerToWebSocket(title, editor, true);
             } else {
                 throw new Error(saveResult?.error?.message || 'Unknown save error');
             }
