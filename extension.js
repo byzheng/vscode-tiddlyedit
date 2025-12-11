@@ -281,14 +281,16 @@ function activate(context) {
             wsManager.sendOpenTiddlerToWebSocket({ title: tiddlerTitle });
         })
     );
+
+    
 }
 
 
 function deactivate() {
     // Stop auto-save timer
     tiddlywikiEditor.stopAutoSave();
-    //tiddlywikiEditor.clearTempFiles(); // Clear temp files on deactivate
-    //wsManager.close(); // Close WebSocket connection on deactivate
+    tiddlywikiEditor.clearTempFiles(); // Clear temp files on deactivate
+    wsManager.close(); // Close WebSocket connection on deactivate
 }
 
 module.exports = {

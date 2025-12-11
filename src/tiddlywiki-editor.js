@@ -254,6 +254,25 @@ function TiddlywikiEditor() {
         }
     }
     function clearTempFiles() {
+        // Close all tabs for temp files
+        // const tabsToClose = [];
+        // for (const tabGroup of vscode.window.tabGroups.all) {
+        //     for (const tab of tabGroup.tabs) {
+        //         if (tab.input instanceof vscode.TabInputText) {
+        //             const tabPath = tab.input.uri.fsPath;
+        //             // Check if tab is in temp directory
+        //             if (isInTempDir(tabPath) && tabPath.endsWith('.tid')) {
+        //                 tabsToClose.push(tab);
+        //             }
+        //         }
+        //     }
+        // }
+        
+        // // Close all tabs at once
+        // if (tabsToClose.length > 0) {
+        //     vscode.window.tabGroups.close(tabsToClose);
+        // }
+        
         // Cleanup all remaining temp files
         for (const filePath of _tempFiles) {
             try {
