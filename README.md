@@ -38,8 +38,13 @@
 
 `tiddlyedit` contributes the following settings:
 
-- `tiddlyedit.host`: Base URL of the TiddlyWiki server (e.g., `http://127.0.0.1:8080`).
-- `tiddlyedit.recipe`: Recipe name to use for TiddlyWiki (e.g., `default`).
+- `tiddlywiki.host`: Base URL of the TiddlyWiki server (e.g., `http://127.0.0.1:8080`).
+- `tiddlywiki.recipe`: Recipe name to use for TiddlyWiki (e.g., `default`).
+- `tiddlywiki.defaultfilter`: Default filter for tiddlers (e.g., `[all[tiddlers]!is[system]!is[shadow]!sort[modified]limit[10]]`).
+- `tiddlywiki.searchFilter`: Search filter for tiddlers (e.g., `[all[tiddlers]!is[system]search:title<query>limit[10]]`).
+- `tiddlywiki.enableAutoSave`: Enable automatic saving of tiddler files (default: `false`).
+- `tiddlywiki.autoSaveInterval`: Auto-save interval in seconds (default: `10`, range: 1-300).
+- `tiddlywiki.sendCursorOffset`: Send cursor position offset to browser when previewing or saving tiddlers (default: `false`). When enabled, the browser can highlight the corresponding position in the tiddler being edited.
 
 You can configure these in your VS Code settings.
 
@@ -52,7 +57,7 @@ You can configure these in your VS Code settings.
 
 ## Latest Release
 
-**Version 0.2.6** - October 7, 2025
-- Enable auto save when editing tiddler in Visual Studio Code (disabled by default)
+**Version 0.2.8** - December 11, 2025
+- Option to send cursor position offset to browser when opening and saving tiddlers (disabled by default), which allows the browser to highlight the cursor row when editing tiddlers in VS Code.
 
 For complete release history, see [CHANGELOG.md](CHANGELOG.md).
