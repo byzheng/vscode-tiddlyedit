@@ -92,7 +92,9 @@ function TiddlywikiEditor() {
                 tiddlerData.title = tiddlerData.title.replaceAll('/', '⁄');
             }
             const tmpFilePath = path.join(_tempFolder, `${tiddlerData.title}.tid`);
-            fs.writeFileSync(tmpFilePath, tiddlerData.text || '', 'utf8');
+            // Normalize line endings to \n to match TiddlyWiki format
+            const normalizedText = (tiddlerData.text || '').replace(/\r\n/g, '\n');
+            fs.writeFileSync(tmpFilePath, normalizedText, 'utf8');
 
             let language = "tiddlywiki5";
             if (tiddlerData.type === "application/javascript") language = "javascript";
@@ -164,7 +166,6 @@ function TiddlywikiEditor() {
                 editBuilder.insert(position, data.content);
             });
 
-            vscode.window.setStatusBarMessage(`Content inserted: "${data.content}"`, 3000);
         } catch (error) {
             console.error('Error inserting content:', error);
             vscode.window.setStatusBarMessage(`Error inserting content: ${error.message}`, 3000);
@@ -287,7 +288,11 @@ function TiddlywikiEditor() {
             return;
         }
         
-        wsManager.sendOpenTiddlerToWebSocket({ title: tiddlerTitle });
+        // Get current cursor position as offset
+        const position = editor.selection.active;
+        const offset = doc.offsetAt(position);
+        
+        wsManager.sendOpenTiddlerToWebSocket({ title: tiddlerTitle, offset: offset });
     }
 
     // Auto-save functionality

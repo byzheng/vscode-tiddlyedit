@@ -58,13 +58,15 @@ function WSManager() {
         };
     }
 
-    function sendOpenTiddlerToWebSocket(tiddler) {
+    function sendOpenTiddlerToWebSocket(data) {
+        console.log('Sending open-tiddler message via WebSocket:', data);
         if (ws && ws.readyState === ws.OPEN) {
             ws.send(JSON.stringify({
                 type: "open-tiddler",
-                title: tiddler.title
+                title: data.title,
+                offset: data.offset
             }));
-            vscode.window.setStatusBarMessage(`Previewing '${tiddler.title}' in TiddlyWiki.`, 3000);
+            vscode.window.setStatusBarMessage(`Previewing '${data.title}' in TiddlyWiki.`, 3000);
         } else {
             vscode.window.setStatusBarMessage('WebSocket is not connected.', 3000);
         }
