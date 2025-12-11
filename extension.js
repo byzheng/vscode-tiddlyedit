@@ -60,6 +60,9 @@ function activate(context) {
         tiddlywikiEditor: tiddlywikiEditor,
         tiddlywikiAPI: tiddlywikiAPI
     })
+
+    tiddlywikiEditor.setWsManagrer(wsManager);
+    
     wsManager.connect();
     const tempFolder = tiddlywikiEditor.getTempFolder();
     const filePattern = `**/${tempFolder}/*.tid`;

@@ -8,7 +8,7 @@
   "publisher": "byzheng",
   "license": "MIT",
   "description": "Seamlessly edit and manage TiddlyWiki tiddlers within VS Code using a REST API connection.",
-  "version": "0.2.7",
+  "version": "0.2.8",
   "engines": {
     "vscode": "^1.102.0"
   },
@@ -55,6 +55,11 @@
           "type": "boolean",
           "default": false,
           "description": "Enable automatic saving of tiddler files"
+        },
+        "tiddlywiki.sendCursorOffset": {
+          "type": "boolean",
+          "default": false,
+          "description": "Send cursor position offset to browser at save and open tiddler when previewing tiddlers"
         }
       }
     },

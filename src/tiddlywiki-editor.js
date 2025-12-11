@@ -8,6 +8,7 @@ function TiddlywikiEditor() {
     let _metaWebView = null;
     let _tiddlersWebView = null;
     let _tiddlywikiAPI = null;
+    let _wsManager = null;
     const _tempFiles = new Set();
     const _tempFolder = path.join(os.tmpdir(), 'tiddlyedit-temp');
     let _autoSaveTimer = null;
@@ -64,11 +65,34 @@ function TiddlywikiEditor() {
         const ms = now.getUTCMilliseconds().toString().padStart(3, '0');
         return `${year}${month}${day}${hour}${min}${sec}${ms}`;
     }
+    
+    // Send tiddler update to browser with optional cursor offset
+    function sendTiddlerToWebSocket(title, editor) {
+        if (!_wsManager) return;
+        
+        const config = vscode.workspace.getConfiguration('tiddlywiki');
+        const sendCursorOffset = config.get('sendCursorOffset', false);
+        
+        const payload = { title };
+        
+        if (sendCursorOffset && editor) {
+            const position = editor.selection.active;
+            const offset = editor.document.offsetAt(position);
+            payload.offset = offset;
+        }
+        
+        _wsManager.sendOpenTiddlerToWebSocket(payload);
+    }
     function initEditor({TiddlersWebView, metaWebview, tiddlywikiAPI})  {
         _metaWebView = metaWebview;
         _tiddlersWebView = TiddlersWebView;
-        _tiddlywikiAPI = tiddlywikiAPI;
+        _tiddlywikiAPI = tiddlywikiAPI
     }
+
+    function setWsManagrer(wsManager) {
+        _wsManager = wsManager;
+    }
+
     async function editTiddler(tiddler) {
         try {
             const result = await _tiddlywikiAPI.getTiddlerByTitle(tiddler.title);
@@ -216,6 +240,10 @@ function TiddlywikiEditor() {
 
             if (saveResult && saveResult.success) {
                 vscode.window.setStatusBarMessage(`✅ Tiddler "${title}" saved`, 3000); // shows for 3 seconds
+                
+                // Send update to browser with cursor offset if enabled
+                const editor = vscode.window.visibleTextEditors.find(ed => ed.document === document);
+                sendTiddlerToWebSocket(title, editor);
             } else {
                 throw new Error(saveResult?.error?.message || 'Unknown save error');
             }
@@ -288,11 +316,8 @@ function TiddlywikiEditor() {
             return;
         }
         
-        // Get current cursor position as offset
-        const position = editor.selection.active;
-        const offset = doc.offsetAt(position);
-        
-        wsManager.sendOpenTiddlerToWebSocket({ title: tiddlerTitle, offset: offset });
+        // Send tiddler to browser with cursor offset if enabled
+        sendTiddlerToWebSocket(tiddlerTitle, editor);
     }
 
     // Auto-save functionality
@@ -360,6 +385,7 @@ function TiddlywikiEditor() {
         previewRmd,
         setupAutoSave,
         stopAutoSave,
+        setWsManagrer,
         getTempFolder() { return _tempFolder; }
     };
 }
