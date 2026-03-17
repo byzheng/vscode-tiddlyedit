@@ -7,7 +7,7 @@
             "command": "sh",
             "args": [
                 "-c",
-                "rm -f ${workspaceFolder}/*.vsix && npx vsce package && code --install-extension $(ls -t ${workspaceFolder}/*.vsix | head -n1)"
+                "rm -f ${workspaceFolder}/*.vsix && npx vsce package && code.cmd --install-extension $(ls -t ${workspaceFolder}/*.vsix | head -n1)"
             ],
             "windows": {
                 "command": "powershell",
